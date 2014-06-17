@@ -26,7 +26,7 @@ SHELL := /bin/bash
 
 # The default make command.
 # Change this to 'lib' if you are building a library.
-DEFAULT = help
+DEFAULT = exe
 # The entry file of library source.
 # Change this to support multi-crate source structure.
 # For advanced usage, you can rename the file 'rust-empty.mk'
@@ -41,7 +41,7 @@ SOURCE_FILES = $(shell test -e src/ && find src -type f)
 COMPILER = rustc
 
 # For release:
-  COMPILER_FLAGS = -O
+  COMPILER_FLAGS = -O  -L /home/wendell/.rust/kiss3d/lib  -L /home/wendell/.rust/kiss3d/lib/glfw-rs/lib   -L /home/wendell/.rust/kiss3d/lib/gl-rs/lib -L /home/wendell/.rust/kiss3d/lib/nalgebra/lib   -L /home/wendell/.rust/kiss3d/lib/ncollide/lib -L /home/wendell/.rust/kiss3d/lib/rust-stb-image/ -L /home/wendell/.rust/kiss3d/lib/rust-freetype/ -L /home/wendell/.rust/kiss3d/lib/rust-ffmpeg/lib
 # For debugging:
 # COMPILER_FLAGS = -g
 
