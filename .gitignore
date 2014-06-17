@@ -12,6 +12,7 @@
 *.exe
 *-test
 *.geany
+/bin
 /bin/main
 /bin/test-internal
 /bin/test-external
