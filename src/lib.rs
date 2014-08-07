@@ -2,7 +2,6 @@
 # ParView
 */
 
-#![crate_id = "parview#0.1"]
 #![crate_type = "lib"]
 #![deny(non_camel_case_types)]
 #![deny(unnecessary_parens)]
@@ -18,40 +17,32 @@ extern crate serialize;
 extern crate nalgebra;
 extern crate kiss3d;
 
-use serialize::{json, Encodable};
+//use serialize::{json, Encodable};
 use std::rand::random;
-use std::io;
+//use std::io;
 
 use nalgebra::na;
 
-#[deriving(Decodable, Encodable)]
+#[deriving(Decodable, Encodable, Clone)]
 /// A single frame, containing spheres
+/// format is (location, radius, Option(color triple))
+pub struct Sphere {
+	/// location of the sphere
+    pub loc : na::Vec3<f32>,
+    /// Radius
+    pub radius : f32,
+    /// Color. if none, one will be assigned
+    pub color : Option<(u8,u8,u8)>,
+}
+
+#[deriving(Decodable, Encodable, Clone)]
+/// A single frame, which is a series of spheres
 pub struct Frame {
-    spheres : Vec<(na::Vec3<f32>, f32)>
+	/// the spheres
+    pub spheres : Vec<Sphere>
 }
 
 /// A random Vec3<f32>, with coordinates in (-0.5, 0.5)
 pub fn rand_vec() -> na::Vec3<f32> {
     na::Vec3::new(random(), random(), random()) - na::Vec3::new(0.5f32, 0.5f32, 0.5f32)
-}
-
-fn main() {
-    let f = Frame {
-        spheres : vec!(
-            (rand_vec(), random()),
-            (rand_vec(), random()),
-            (rand_vec(), random()),
-            (rand_vec(), random())
-        )
-    };
-    
-    let path = Path::new("test_frame.json");
-    let mut file = BufferedReader::new(File::open(&path));
-    {
-        let mut encoder = json::Encoder::new(&mut m as &mut std::io::Writer);
-        match f.encode(&mut encoder) {
-            Ok(()) => (println!("Made object {}", m)),
-            Err(e) => fail!("json encoding error: {}", e)
-        };
-    }
 }

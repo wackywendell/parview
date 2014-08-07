@@ -15,6 +15,7 @@ extern crate serialize;
 
 extern crate nalgebra;
 extern crate kiss3d;
+extern crate parview;
 
 use serialize::{json, Encodable, Decodable};
 use std::rand::random;
@@ -22,34 +23,26 @@ use std::io::{File,BufferedWriter,BufferedReader};
 
 use nalgebra::na;
 
-#[deriving(Decodable, Encodable, Clone)]
-/// A single frame, containing spheres
-pub struct Frame {
-    spheres : Vec<(na::Vec3<f32>, f32)>
-}
+use kiss3d::window::Window;
 
-/// A random Vec3<f32>, with coordinates in (-0.5, 0.5)
-pub fn rand_vec() -> na::Vec3<f32> {
-    na::Vec3::new(random(), random(), random()) - na::Vec3::new(0.5f32, 0.5f32, 0.5f32)
-}
+use parview::{Sphere,Frame,rand_vec};
 
 fn generate_frame() {
     let f = Frame {
         spheres : Vec::from_fn(16, |_| {
             let loc : na::Vec3<f32> = rand_vec();
             let s : f32 = random();
-            (loc, s*0.1)
+            Sphere{loc:loc, radius:s*0.1, color:None}
         })
             
     };
     
-    let mut framevec = vec!();
-    let mut f2 = f.clone();
+    let mut framevec : Vec<Frame> = vec!();
     
-    for _ in range(0,200){
-        f2 = Frame {
-            spheres : f2.spheres.iter().map(|&(v, s)| {
-                (v + (rand_vec() * 0.1f32), s)
+    for _ in range(0u,200u){
+        let f2 = Frame {
+            spheres : f.spheres.iter().map(|&Sphere{loc:loc, radius:r, color:col}| {
+				Sphere{loc:loc + (rand_vec() * 0.1f32), radius:r*0.1, color:col}
             }).collect()
         };
         framevec.push(f2.clone());
@@ -66,7 +59,7 @@ fn generate_frame() {
     }
 }
 
-fn draw_cube(window : &mut kiss3d::window::Window) -> kiss3d::scene::SceneNode {
+fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
     let rotations : Vec<Option<na::Vec3<f32>>> = vec!(
         None, Some(na::Vec3::x()), Some(na::Vec3::z()));
     let translations = vec!((-0.5f32, -0.5),
@@ -115,48 +108,51 @@ fn main() {
                 (0.6000, 0.6000, 0.6000),
                 (1.0000, 1.0000, 0.2000)];
     
-    let f : Frame = frames.get(0).clone();
+    let ref f : Frame = frames[0];
     
-    kiss3d::window::Window::spawn("Kiss3d: draw_sphere", |window| {
-        let cube = draw_cube(window);
+    let mut window = Window::new("Kiss3d: draw_sphere");
+	let _ = draw_cube(&mut window);
 
-        let eye              = na::Vec3::new(0.0f32, 0.0, 2.0);
-        let at               = na::zero();
-        let mut arc_ball     = kiss3d::camera::ArcBall::new(eye, at);
+	let eye              = na::Vec3::new(0.0f32, 0.0, 2.0);
+	let at               = na::zero();
+	let mut arc_ball     = kiss3d::camera::ArcBall::new(eye, at);
 
-        window.set_camera(&mut arc_ball as &mut kiss3d::camera::Camera);
-
-        //window.set_background_color(1.0, 1.0, 1.0);
-        window.set_light(kiss3d::light::StickToCamera);
-        window.set_framerate_limit(Some(20));
-        
-        
-        let mut sphere_set = vec!();
-        for (n, &(loc, diam)) in f.spheres.iter().enumerate() {
-            let mut s = window.add_sphere(diam / 2.0);
-            let (r,g,b) = cols[n % cols.len()];
-            s.set_color(r,g,b);
-            s.append_translation(&loc);
-            sphere_set.push(s);
-        }
-        
-        let mut t = 0;
-        
-        let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), 120);
-        
-        window.render_loop(|window|{
-            t += 1;
-            
-            let i = (t / 10) % frames.len();
-            window.draw_text(format!("t = {}", i).as_slice(), 
-                &na::zero(), &font, &na::Vec3::new(0.0, 1.0, 1.0));
-            
-            if t % 10 == 0 {
-                let frame = frames.get(i);
-                for (&(loc, diam), s) in frame.spheres.iter().zip(sphere_set.mut_iter()) {
-                    s.set_local_translation(loc);
-                }
-            }
-        });
-    })
+	//window.set_background_color(1.0, 1.0, 1.0);
+	window.set_light(kiss3d::light::StickToCamera);
+	window.set_framerate_limit(Some(20));
+	
+	
+	let mut sphere_set = vec!();
+	for (n, &Sphere{loc:loc, radius:radius, color:colopt}) 
+			in f.spheres.iter().enumerate() {
+		let mut s = window.add_sphere(radius);
+		let (r,g,b) = match colopt {
+			Some((r,g,b)) => (r as f32 / 255., g as f32 / 255., b as f32 / 255.),
+			None => cols[n % cols.len()]
+		};
+		s.set_color(r,g,b);
+		s.append_translation(&loc);
+		sphere_set.push(s);
+	}
+	
+	let mut t = 0;
+	
+	let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), 120);
+	
+	while window.render_with_camera(&mut arc_ball) {
+	// for _ in window.iter_with_camera(arc_ball) {
+		t += 1;
+		
+		let i = (t / 10) % frames.len();
+		window.draw_text(format!("t = {}", i).as_slice(), 
+			&na::zero(), &font, &na::Vec3::new(0.0, 1.0, 1.0));
+		
+		if t % 10 == 0 {
+			let ref frame = frames[i];
+			for (&Sphere{loc:loc, radius:radius, color:colopt}, s)
+					in frame.spheres.iter().zip(sphere_set.mut_iter()) {
+				s.set_local_translation(loc);
+			}
+		}
+	};
 }
