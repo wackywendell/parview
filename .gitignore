@@ -21,4 +21,5 @@
 /build/
 /.rust/
 rusti.sh
-
+Cargo.lock
+test*.json
