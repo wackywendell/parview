@@ -42,7 +42,7 @@ fn generate_frame() {
     for _ in range(0u,200u){
         let f2 = Frame {
             spheres : f.spheres.iter().map(|&Sphere{loc:loc, radius:r, color:col}| {
-				Sphere{loc:loc + (rand_vec() * 0.1f32), radius:r*0.1, color:col}
+				Sphere{loc:loc + (rand_vec() * 0.1f32), radius:r*0.4, color:col}
             }).collect()
         };
         framevec.push(f2.clone());
@@ -88,7 +88,8 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
     cube
 }
 
-fn main() {
+/// Main entry point, now using test_frame.json
+pub fn main() {
     generate_frame();
     let path = Path::new("test_frame.json");
     let mut file = BufferedReader::new(File::open(&path));
@@ -149,8 +150,8 @@ fn main() {
 		
 		if t % 10 == 0 {
 			let ref frame = frames[i];
-			for (&Sphere{loc:loc, radius:radius, color:colopt}, s)
-					in frame.spheres.iter().zip(sphere_set.mut_iter()) {
+			for (&Sphere{loc:loc, radius:_, color:_}, s)
+					in frame.spheres.iter().zip(sphere_set.iter_mut()) {
 				s.set_local_translation(loc);
 			}
 		}
