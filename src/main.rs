@@ -1,6 +1,7 @@
 /*!
 # ParView
 */
+#![feature(phase)]
 
 #![deny(non_camel_case_types)]
 #![deny(unnecessary_parens)]
@@ -9,25 +10,29 @@
 #![deny(missing_doc)]
 #![deny(unused_result)]
 #![deny(unnecessary_typecast)]
-#![deny(visible_private_types)]
+
+#[phase(plugin)]
+extern crate docopt_macros;
+extern crate docopt;
 
 extern crate serialize;
+extern crate flate2;
 
-extern crate nalgebra;
+extern crate "nalgebra" as na;
 extern crate kiss3d;
 extern crate parview;
 
 use serialize::{json, Encodable, Decodable};
+use flate2::reader::GzDecoder;
 use std::rand::random;
 use std::io::{File,BufferedWriter,BufferedReader};
-
-use nalgebra::na;
 
 use kiss3d::window::Window;
 
 use parview::{Sphere,Frame,rand_vec};
 
-fn generate_frame() {
+/// Generate an example json file
+pub fn generate_frame() {
     let f = Frame {
         spheres : Vec::from_fn(16, |_| {
             let loc : na::Vec3<f32> = rand_vec();
@@ -88,14 +93,70 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
     cube
 }
 
+fn open_file(path : &Path) -> std::io::IoResult<Vec<Frame>> {
+	let mut buf = BufferedReader::new(File::open(path));
+	//~ let coded = json::from_reader(&mut buf).unwrap();
+    //~ let mut decoder =json::Decoder::new(coded);
+    //~ let frames: Vec<Frame> = Decodable::decode(&mut decoder).unwrap();
+    
+	let coded_opt = match path.extension(){
+		Some(b"gz") => match GzDecoder::new(buf) {
+				Err(e) => {return Err(e);}
+				Ok(mut gzbuf) => {json::from_reader(&mut gzbuf)}
+		},
+		_ => {
+			json::from_reader(&mut buf)
+			}
+	};
+	
+	let json_result = match coded_opt {
+		Err(e) => {
+			return Err(std::io::IoError{
+				kind: std::io::InvalidInput,
+				desc: "Parser Error",
+				detail: Some(format!("{}", e))
+			});
+		}
+		Ok(coded) => {
+			let mut decoder =json::Decoder::new(coded);
+			Decodable::decode(&mut decoder)
+		}
+	};
+	
+	match json_result {
+		Ok(frames) => Ok(frames),
+		Err(e) =>  Err(
+			std::io::IoError{
+				kind: std::io::InvalidInput,
+				desc: "Decoder Error",
+				detail: Some(format!("{}", e))
+			}
+		)
+	}
+}
+
+docopt!(Args, "
+Usage: parview [-h | --help] [-g] [<file>]
+
+Options:
+	[-h | --help]   Help and usage
+	-g
+
+Arguments:
+    <file>     	json file representing the frames. json.gz also accepted, if the extension is \".gz\".
+", 
+	flag_g : bool, 
+	arg_file : Option<String>)
+
 /// Main entry point, now using test_frame.json
 pub fn main() {
-    generate_frame();
-    let path = Path::new("test_frame.json");
-    let mut file = BufferedReader::new(File::open(&path));
-    let coded = json::from_reader(&mut file).unwrap();
-    let mut decoder =json::Decoder::new(coded);
-    let frames: Vec<Frame> = Decodable::decode(&mut decoder).unwrap();
+	let args: Args = docopt::FlagParser::parse().unwrap_or_else(|e| e.exit());
+    if args.flag_g {
+		generate_frame()
+	}
+    
+    let path = Path::new(args.arg_file.unwrap_or("test_frame.json".to_string()));
+    let frames = open_file(&path).unwrap();
     
     let cols = [(1.,1.,1.),
                 (0.,0.,0.),
@@ -114,8 +175,8 @@ pub fn main() {
     let mut window = Window::new("Kiss3d: draw_sphere");
 	let _ = draw_cube(&mut window);
 
-	let eye              = na::Vec3::new(0.0f32, 0.0, 2.0);
-	let at               = na::zero();
+	let eye              = na::Pnt3::new(0.0f32, 0.0, 2.0);
+	let at               = na::orig();
 	let mut arc_ball     = kiss3d::camera::ArcBall::new(eye, at);
 
 	//window.set_background_color(1.0, 1.0, 1.0);
@@ -146,7 +207,7 @@ pub fn main() {
 		
 		let i = (t / 10) % frames.len();
 		window.draw_text(format!("t = {}", i).as_slice(), 
-			&na::zero(), &font, &na::Vec3::new(0.0, 1.0, 1.0));
+			&na::orig(), &font, &na::Pnt3::new(0.0, 1.0, 1.0));
 		
 		if t % 10 == 0 {
 			let ref frame = frames[i];

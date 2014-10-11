@@ -10,18 +10,15 @@
 #![deny(missing_doc)]
 #![deny(unused_result)]
 #![deny(unnecessary_typecast)]
-#![deny(visible_private_types)]
 
 extern crate serialize;
 
-extern crate nalgebra;
+extern crate "nalgebra" as na;
 extern crate kiss3d;
 
 //use serialize::{json, Encodable};
 use std::rand::random;
 //use std::io;
-
-use nalgebra::na;
 
 #[deriving(Decodable, Encodable, Clone)]
 /// A single frame, containing spheres
