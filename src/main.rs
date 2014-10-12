@@ -173,7 +173,7 @@ pub fn main() {
     
     let ref f : Frame = frames[0];
     
-    let mut window = Window::new("Kiss3d: draw_sphere");
+    let mut window = Window::new(format!("Parviewer: {}", path.as_str()).as_slice());
 	let _ = draw_cube(&mut window);
 
 	let eye              = na::Pnt3::new(0.0f32, 0.0, 2.0);
@@ -211,12 +211,27 @@ pub fn main() {
 					timer.switch_direction();
 					event.inhibited = true; // override the default keyboard handler
 				}
-				glfw::KeyEvent(code, _, glfw::Release, _) => {
+				glfw::KeyEvent(glfw::KeyUp, _, glfw::Release, _) => {
+                    arc_ball.set_pitch(3.14159/3.);
+                    arc_ball.set_yaw(3.14159/4.);
+                    event.inhibited = true // override the default keyboard handler
+                },
+				glfw::KeyEvent(glfw::KeyDown, _, glfw::Release, _) => {
+                    arc_ball.set_pitch(3.14159/2.);
+                    arc_ball.set_yaw(3.14159/2.);
+                    event.inhibited = true // override the default keyboard handler
+                },
+                glfw::KeyEvent(glfw::KeyW, _, glfw::Release, _) => {
+                    println!("yaw: {:6.2f}, pitch: {:6.2f}", arc_ball.yaw(), arc_ball.pitch());
+                    //~ println!("Do not try to press escape: the event is inhibited!");
+                    event.inhibited = true // override the default keyboard handler
+                },
+                glfw::KeyEvent(code, _, glfw::Release, _) => {
                     println!("You released the key with code: {}", code);
                     //~ println!("Do not try to press escape: the event is inhibited!");
                     event.inhibited = true // override the default keyboard handler
                 },
-                _ => {}
+				_ => {}
 			}
 		}
                 
