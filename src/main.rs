@@ -20,6 +20,7 @@ extern crate flate2;
 
 extern crate "nalgebra" as na;
 extern crate kiss3d;
+extern crate glfw;
 extern crate parview;
 
 use serialize::{json, Encodable, Decodable};
@@ -38,19 +39,31 @@ pub fn generate_frame() {
             let loc : na::Vec3<f32> = rand_vec();
             let s : f32 = random();
             Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, color:None}
-        })
-            
+        }),
+        text : None
     };
     
     let mut framevec : Vec<Frame> = vec!();
     
-    for _ in range(0u,200u){
-        let f2 = Frame {
-            spheres : f.spheres.iter().map(|&s| {
-				Sphere::new(s.x() + (rand_vec() * 0.1f32), s.radius, s.color)
-            }).collect()
+    for i in range(0u,40u){
+        let mut f2 = Frame {
+            spheres : f.spheres.iter().enumerate().map(|(n, &s)| {
+					let mut newr = s.radius;
+					let mut color = s.color;
+					if n == 0 {
+						newr = random::<f32>() * 0.2f32;
+						color = Some((random::<u8>(), random::<u8>(), random::<u8>()));
+					}
+					Sphere::new(s.x() + (rand_vec() * 0.1f32), newr, color)
+				}).collect(),
+            text : Some(format!("Frame {} with {} spheres", i, f.spheres.len()))
         };
-        framevec.push(f2.clone());
+        
+        if i > 10 && i < 20 {
+			let l = f2.spheres.len();
+			f2.spheres.truncate(l - 8);
+		}
+        framevec.push(f2);
     }
     
     let path = Path::new("test_frame.json");
@@ -158,18 +171,6 @@ pub fn main() {
     let path = Path::new(args.arg_file.unwrap_or("test_frame.json".to_string()));
     let frames = open_file(&path).unwrap();
     
-    let cols = [(1.,1.,1.),
-                (0.,0.,0.),
-                (0.8941, 0.1020, 0.1098),
-                (0.2157, 0.4941, 0.7216),
-                (0.3020, 0.6863, 0.2902),
-                (0.5961, 0.3059, 0.6392),
-                (1.0000, 0.4980, 0.0000),
-                (0.6510, 0.3373, 0.1569),
-                (0.9686, 0.5059, 0.7490),
-                (0.6000, 0.6000, 0.6000),
-                (1.0000, 1.0000, 0.2000)];
-    
     let ref f : Frame = frames[0];
     
     let mut window = Window::new("Kiss3d: draw_sphere");
@@ -183,38 +184,60 @@ pub fn main() {
 	window.set_light(kiss3d::light::StickToCamera);
 	window.set_framerate_limit(Some(20));
 	
+	let mut nodes = parview::SphereNodes::new(f.spheres.iter(), &mut window);
 	
-	let mut sphere_set = vec!();
-	for (n, &sphere) 
-			in f.spheres.iter().enumerate() {
-		let mut s = window.add_sphere(sphere.radius);
-		let (r,g,b) = match sphere.color {
-			Some((r,g,b)) => (r as f32 / 255., g as f32 / 255., b as f32 / 255.),
-			None => cols[n % cols.len()]
-		};
-		s.set_color(r,g,b);
-		s.append_translation(&sphere.x());
-		sphere_set.push(s);
-	}
+	let mut lastframe = -1;
+	let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
+	let mut text = None;
 	
-	let mut t = 0;
-	
-	let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), 120);
+	let fontsize =48;
+	let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), fontsize);
 	
 	while window.render_with_camera(&mut arc_ball) {
-	// for _ in window.iter_with_camera(arc_ball) {
-		t += 1;
-		
-		let i = (t / 10) % frames.len();
-		window.draw_text(format!("t = {}", i).as_slice(), 
-			&na::orig(), &font, &na::Pnt3::new(0.0, 1.0, 1.0));
-		
-		if t % 10 == 0 {
-			let ref frame = frames[i];
-			for (&sphere, s)
-					in frame.spheres.iter().zip(sphere_set.iter_mut()) {
-				s.set_local_translation(sphere.x());
+		for mut event in window.events().iter() {
+            match event.value {
+				glfw::KeyEvent(glfw::KeyQ, _, glfw::Release, _) => {
+					return;
+				},
+				glfw::KeyEvent(glfw::KeyComma, _, glfw::Release, _) => {
+					timer.slower();
+					event.inhibited = true; // override the default keyboard handler
+				},
+				glfw::KeyEvent(glfw::KeyPeriod, _, glfw::Release, _) => {
+					timer.faster();
+					event.inhibited = true; // override the default keyboard handler
+				},
+				glfw::KeyEvent(glfw::KeyF, _, glfw::Release, _) => {
+					timer.switch_direction();
+					event.inhibited = true; // override the default keyboard handler
+				}
+				glfw::KeyEvent(code, _, glfw::Release, _) => {
+                    println!("You released the key with code: {}", code);
+                    //~ println!("Do not try to press escape: the event is inhibited!");
+                    event.inhibited = true // override the default keyboard handler
+                },
+                _ => {}
 			}
 		}
+                
+		let i = timer.incr();
+		
+		if lastframe != i {
+			let ref frame = frames[i];
+			text = frame.text.clone();
+			nodes.update(frame.spheres.iter(), &mut window);
+			lastframe = i;
+		}
+		
+		match text {
+			Some(ref t) => {
+				window.draw_text(t.as_slice(), &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
+			}
+			None => {}
+		}
+		
+		let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
+		window.draw_text(format!("t:{:6}, dt:{:8.2f}", i, timer.get_dt()).as_slice(),
+				&text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));
 	};
 }
