@@ -48,21 +48,21 @@ pub fn generate_frame() {
     for i in range(0u,40u){
         let mut f2 = Frame {
             spheres : f.spheres.iter().enumerate().map(|(n, &s)| {
-					let mut newr = s.radius;
-					let mut color = s.color;
-					if n == 0 {
-						newr = random::<f32>() * 0.2f32;
-						color = Some((random::<u8>(), random::<u8>(), random::<u8>()));
-					}
-					Sphere::new(s.x() + (rand_vec() * 0.1f32), newr, color)
-				}).collect(),
+                    let mut newr = s.radius;
+                    let mut color = s.color;
+                    if n == 0 {
+                        newr = random::<f32>() * 0.2f32;
+                        color = Some((random::<u8>(), random::<u8>(), random::<u8>()));
+                    }
+                    Sphere::new(s.x() + (rand_vec() * 0.1f32), newr, color)
+                }).collect(),
             text : Some(format!("Frame {} with {} spheres", i, f.spheres.len()))
         };
         
         if i > 10 && i < 20 {
-			let l = f2.spheres.len();
-			f2.spheres.truncate(l - 8);
-		}
+            let l = f2.spheres.len();
+            f2.spheres.truncate(l - 8);
+        }
         framevec.push(f2);
     }
     
@@ -107,66 +107,66 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
 }
 
 fn open_file(path : &Path) -> std::io::IoResult<Vec<Frame>> {
-	let mut buf = BufferedReader::new(File::open(path));
-	//~ let coded = json::from_reader(&mut buf).unwrap();
+    let mut buf = BufferedReader::new(File::open(path));
+    //~ let coded = json::from_reader(&mut buf).unwrap();
     //~ let mut decoder =json::Decoder::new(coded);
     //~ let frames: Vec<Frame> = Decodable::decode(&mut decoder).unwrap();
     
-	let coded_opt = match path.extension(){
-		Some(b"gz") => match GzDecoder::new(buf) {
-				Err(e) => {return Err(e);}
-				Ok(mut gzbuf) => {json::from_reader(&mut gzbuf)}
-		},
-		_ => {
-			json::from_reader(&mut buf)
-			}
-	};
-	
-	let json_result = match coded_opt {
-		Err(e) => {
-			return Err(std::io::IoError{
-				kind: std::io::InvalidInput,
-				desc: "Parser Error",
-				detail: Some(format!("{}", e))
-			});
-		}
-		Ok(coded) => {
-			let mut decoder =json::Decoder::new(coded);
-			Decodable::decode(&mut decoder)
-		}
-	};
-	
-	match json_result {
-		Ok(frames) => Ok(frames),
-		Err(e) =>  Err(
-			std::io::IoError{
-				kind: std::io::InvalidInput,
-				desc: "Decoder Error",
-				detail: Some(format!("{}", e))
-			}
-		)
-	}
+    let coded_opt = match path.extension(){
+        Some(b"gz") => match GzDecoder::new(buf) {
+                Err(e) => {return Err(e);}
+                Ok(mut gzbuf) => {json::from_reader(&mut gzbuf)}
+        },
+        _ => {
+            json::from_reader(&mut buf)
+            }
+    };
+    
+    let json_result = match coded_opt {
+        Err(e) => {
+            return Err(std::io::IoError{
+                kind: std::io::InvalidInput,
+                desc: "Parser Error",
+                detail: Some(format!("{}", e))
+            });
+        }
+        Ok(coded) => {
+            let mut decoder =json::Decoder::new(coded);
+            Decodable::decode(&mut decoder)
+        }
+    };
+    
+    match json_result {
+        Ok(frames) => Ok(frames),
+        Err(e) =>  Err(
+            std::io::IoError{
+                kind: std::io::InvalidInput,
+                desc: "Decoder Error",
+                detail: Some(format!("{}", e))
+            }
+        )
+    }
 }
 
 docopt!(Args, "
 Usage: parview [-h | --help] [-g] [<file>]
 
 Options:
-	[-h | --help]   Help and usage
-	-g
+    [-h | --help]   Help and usage
+    -g
 
 Arguments:
-    <file>     	json file representing the frames. json.gz also accepted, if the extension is \".gz\".
+    <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
 ", 
-	flag_g : bool, 
-	arg_file : Option<String>)
+    flag_g : bool, 
+    arg_file : Option<String>)
 
 /// Main entry point, now using test_frame.json
 pub fn main() {
-	let args: Args = docopt::FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = docopt::FlagParser::parse().unwrap_or_else(|e| e.exit());
     if args.flag_g {
-		generate_frame()
-	}
+        generate_frame()
+    }
     
     let path = Path::new(args.arg_file.unwrap_or("test_frame.json".to_string()));
     let frames = open_file(&path).unwrap();
@@ -174,49 +174,49 @@ pub fn main() {
     let ref f : Frame = frames[0];
     
     let mut window = Window::new(format!("Parviewer: {}", path.as_str()).as_slice());
-	let _ = draw_cube(&mut window);
+    let _ = draw_cube(&mut window);
 
-	let eye              = na::Pnt3::new(0.0f32, 0.0, 2.0);
-	let at               = na::orig();
-	let mut arc_ball     = kiss3d::camera::ArcBall::new(eye, at);
+    let eye              = na::Pnt3::new(0.0f32, 0.0, 2.0);
+    let at               = na::orig();
+    let mut arc_ball     = kiss3d::camera::ArcBall::new(eye, at);
 
-	//window.set_background_color(1.0, 1.0, 1.0);
-	window.set_light(kiss3d::light::StickToCamera);
-	window.set_framerate_limit(Some(20));
-	
-	let mut nodes = parview::SphereNodes::new(f.spheres.iter(), &mut window);
-	
-	let mut lastframe = -1;
-	let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
-	let mut text = None;
-	
-	let fontsize =48;
-	let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), fontsize);
-	
-	while window.render_with_camera(&mut arc_ball) {
-		for mut event in window.events().iter() {
+    //window.set_background_color(1.0, 1.0, 1.0);
+    window.set_light(kiss3d::light::StickToCamera);
+    window.set_framerate_limit(Some(20));
+    
+    let mut nodes = parview::SphereNodes::new(f.spheres.iter(), &mut window);
+    
+    let mut lastframe = -1;
+    let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
+    let mut text = None;
+    
+    let fontsize =48;
+    let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), fontsize);
+    
+    while window.render_with_camera(&mut arc_ball) {
+        for mut event in window.events().iter() {
             match event.value {
-				glfw::KeyEvent(glfw::KeyQ, _, glfw::Release, _) => {
-					return;
-				},
-				glfw::KeyEvent(glfw::KeyComma, _, glfw::Release, _) => {
-					timer.slower();
-					event.inhibited = true; // override the default keyboard handler
-				},
-				glfw::KeyEvent(glfw::KeyPeriod, _, glfw::Release, _) => {
-					timer.faster();
-					event.inhibited = true; // override the default keyboard handler
-				},
-				glfw::KeyEvent(glfw::KeyF, _, glfw::Release, _) => {
-					timer.switch_direction();
-					event.inhibited = true; // override the default keyboard handler
-				}
-				glfw::KeyEvent(glfw::KeyUp, _, glfw::Release, _) => {
+                glfw::KeyEvent(glfw::KeyQ, _, glfw::Release, _) => {
+                    return;
+                },
+                glfw::KeyEvent(glfw::KeyComma, _, glfw::Release, _) => {
+                    timer.slower();
+                    event.inhibited = true; // override the default keyboard handler
+                },
+                glfw::KeyEvent(glfw::KeyPeriod, _, glfw::Release, _) => {
+                    timer.faster();
+                    event.inhibited = true; // override the default keyboard handler
+                },
+                glfw::KeyEvent(glfw::KeyF, _, glfw::Release, _) => {
+                    timer.switch_direction();
+                    event.inhibited = true; // override the default keyboard handler
+                }
+                glfw::KeyEvent(glfw::KeyUp, _, glfw::Release, _) => {
                     arc_ball.set_pitch(3.14159/3.);
                     arc_ball.set_yaw(3.14159/4.);
                     event.inhibited = true // override the default keyboard handler
                 },
-				glfw::KeyEvent(glfw::KeyDown, _, glfw::Release, _) => {
+                glfw::KeyEvent(glfw::KeyDown, _, glfw::Release, _) => {
                     arc_ball.set_pitch(3.14159/2.);
                     arc_ball.set_yaw(3.14159/2.);
                     event.inhibited = true // override the default keyboard handler
@@ -231,28 +231,28 @@ pub fn main() {
                     //~ println!("Do not try to press escape: the event is inhibited!");
                     event.inhibited = true // override the default keyboard handler
                 },
-				_ => {}
-			}
-		}
+                _ => {}
+            }
+        }
                 
-		let i = timer.incr();
-		
-		if lastframe != i {
-			let ref frame = frames[i];
-			text = frame.text.clone();
-			nodes.update(frame.spheres.iter(), &mut window);
-			lastframe = i;
-		}
-		
-		match text {
-			Some(ref t) => {
-				window.draw_text(t.as_slice(), &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
-			}
-			None => {}
-		}
-		
-		let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
-		window.draw_text(format!("t:{:6}, dt:{:8.2f}", i, timer.get_dt()).as_slice(),
-				&text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));
-	};
+        let i = timer.incr();
+        
+        if lastframe != i {
+            let ref frame = frames[i];
+            text = frame.text.clone();
+            nodes.update(frame.spheres.iter(), &mut window);
+            lastframe = i;
+        }
+        
+        match text {
+            Some(ref t) => {
+                window.draw_text(t.as_slice(), &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
+            }
+            None => {}
+        }
+        
+        let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
+        window.draw_text(format!("t:{:6}, dt:{:8.2f}", i, timer.get_dt()).as_slice(),
+                &text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));
+    };
 }
