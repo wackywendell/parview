@@ -37,7 +37,7 @@ pub fn generate_frame() {
         spheres : Vec::from_fn(16, |_| {
             let loc : na::Vec3<f32> = rand_vec();
             let s : f32 = random();
-            Sphere{loc:loc, radius:s*0.1, color:None}
+            Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, color:None}
         })
             
     };
@@ -46,8 +46,8 @@ pub fn generate_frame() {
     
     for _ in range(0u,200u){
         let f2 = Frame {
-            spheres : f.spheres.iter().map(|&Sphere{loc:loc, radius:r, color:col}| {
-				Sphere{loc:loc + (rand_vec() * 0.1f32), radius:r*0.4, color:col}
+            spheres : f.spheres.iter().map(|&s| {
+				Sphere::new(s.x() + (rand_vec() * 0.1f32), s.radius, s.color)
             }).collect()
         };
         framevec.push(f2.clone());
@@ -185,15 +185,15 @@ pub fn main() {
 	
 	
 	let mut sphere_set = vec!();
-	for (n, &Sphere{loc:loc, radius:radius, color:colopt}) 
+	for (n, &sphere) 
 			in f.spheres.iter().enumerate() {
-		let mut s = window.add_sphere(radius);
-		let (r,g,b) = match colopt {
+		let mut s = window.add_sphere(sphere.radius);
+		let (r,g,b) = match sphere.color {
 			Some((r,g,b)) => (r as f32 / 255., g as f32 / 255., b as f32 / 255.),
 			None => cols[n % cols.len()]
 		};
 		s.set_color(r,g,b);
-		s.append_translation(&loc);
+		s.append_translation(&sphere.x());
 		sphere_set.push(s);
 	}
 	
@@ -211,9 +211,9 @@ pub fn main() {
 		
 		if t % 10 == 0 {
 			let ref frame = frames[i];
-			for (&Sphere{loc:loc, radius:_, color:_}, s)
+			for (&sphere, s)
 					in frame.spheres.iter().zip(sphere_set.iter_mut()) {
-				s.set_local_translation(loc);
+				s.set_local_translation(sphere.x());
 			}
 		}
 	};

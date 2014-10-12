@@ -16,6 +16,8 @@ extern crate serialize;
 extern crate "nalgebra" as na;
 extern crate kiss3d;
 
+use na::Indexable;
+
 //use serialize::{json, Encodable};
 use std::rand::random;
 //use std::io;
@@ -25,11 +27,28 @@ use std::rand::random;
 /// format is (location, radius, Option(color triple))
 pub struct Sphere {
 	/// location of the sphere
-    pub loc : na::Vec3<f32>,
+    pub loc : (f32,f32,f32),
     /// Radius
     pub radius : f32,
     /// Color. if none, one will be assigned
     pub color : Option<(u8,u8,u8)>,
+}
+
+impl Sphere {
+	/// Make a new sphere
+	pub fn new(loc : na::Vec3<f32>, radius : f32, color : Option<(u8,u8,u8)>) -> Sphere {
+		Sphere {
+			loc : (loc.at(0), loc.at(1), loc.at(2)),
+			radius : radius,
+			color : color
+		}
+	}
+	
+	/// get the location as a Vec3
+	pub fn x(&self) -> na::Vec3<f32> {
+		let (x,y,z) = self.loc;
+		na::Vec3::new(x,y,z)
+	}
 }
 
 #[deriving(Decodable, Encodable, Clone)]
