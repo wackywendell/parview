@@ -4,25 +4,26 @@
 
 #![crate_type = "lib"]
 #![deny(non_camel_case_types)]
-#![deny(unnecessary_parens)]
-#![deny(non_uppercase_statics)]
-#![deny(unnecessary_qualification)]
-#![deny(missing_doc)]
-#![deny(unused_result)]
-#![deny(unnecessary_typecast)]
+#![deny(unused_parens)]
+#![deny(non_upper_case_globals)]
+#![deny(unused_qualifications)]
+#![deny(missing_docs)]
+#![deny(unused_results)]
+#![deny(unused_typecasts)]
 
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
+//extern crate serialize;
 
 extern crate "nalgebra" as na;
 extern crate kiss3d;
 
-use na::Indexable;
+//use na::{Indexable,Iterable};
 
 //use serialize::{json, Encodable};
 use std::rand::random;
 //use std::io;
 
-#[deriving(Decodable, Encodable, Clone)]
+#[deriving(RustcDecodable, RustcEncodable, Copy, Clone)]
 /// A single frame, containing spheres
 /// format is (location, radius, Option(color triple))
 pub struct Sphere {
@@ -38,7 +39,7 @@ impl Sphere {
     /// Make a new sphere
     pub fn new(loc : na::Vec3<f32>, radius : f32, color : Option<(u8,u8,u8)>) -> Sphere {
         Sphere {
-            loc : (loc.at(0), loc.at(1), loc.at(2)),
+            loc :  (loc[0], loc[1], loc[2]), //loc.iter().collect(),
             radius : radius,
             color : color
         }
@@ -51,7 +52,7 @@ impl Sphere {
     }
 }
 
-#[deriving(Decodable, Encodable, Clone)]
+#[deriving(RustcDecodable, RustcEncodable, Clone)]
 /// A single frame, which is a series of spheres
 pub struct Frame {
     /// the spheres
@@ -96,7 +97,7 @@ impl SphereNodes {
     /// Update the drawn spheres to match the data
     pub fn update<'a, T : Iterator<&'a Sphere>>(&mut self, sphere_iter : T, window : &mut kiss3d::window::Window) {
         let mut maxn = 0;
-        for (n, &sphere) in sphere_iter.enumerate() {
+        for (n, ref sphere) in sphere_iter.enumerate() {
             match n >= self.spheres.len() {
                 false => {}
                 true => {
@@ -111,7 +112,7 @@ impl SphereNodes {
                 None => DEFAULT_COLORS[n % DEFAULT_COLORS.len()]
             };
             
-            let s : &mut kiss3d::scene::SceneNode = self.spheres.get_mut(n);
+            let s : &mut kiss3d::scene::SceneNode = self.spheres.get_mut(n).unwrap();
             s.set_color(r,g,b);
             s.set_local_translation(sphere.x());
             s.set_local_scale(sphere.radius, sphere.radius, sphere.radius);

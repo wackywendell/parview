@@ -9,10 +9,10 @@ authors = [ "wendell.smith@yale.edu" ]
 git = "https://github.com/sebcrozet/kiss3d.git"
 
 [dependencies.docopt]
-git = "https://github.com/burntsushi/docopt.rs"
+git = "https://github.com/docopt/docopt.rs"
 
 [dependencies.docopt_macros]
-git = "https://github.com/burntsushi/docopt.rs"
+git = "https://github.com/docopt/docopt.rs"
 
 [dependencies.flate2]
 git = "https://github.com/alexcrichton/flate2-rs"

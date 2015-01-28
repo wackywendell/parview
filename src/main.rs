@@ -4,18 +4,18 @@
 #![feature(phase)]
 
 #![deny(non_camel_case_types)]
-#![deny(unnecessary_parens)]
-#![deny(non_uppercase_statics)]
-#![deny(unnecessary_qualification)]
-#![deny(missing_doc)]
-#![deny(unused_result)]
-#![deny(unnecessary_typecast)]
+#![deny(unused_parens)]
+#![deny(non_upper_case_globals)]
+#![deny(unused_qualifications)]
+#![deny(missing_docs)]
+#![deny(unused_results)]
+#![deny(unused_typecasts)]
 
 #[phase(plugin)]
 extern crate docopt_macros;
 extern crate docopt;
 
-extern crate serialize;
+extern crate "rustc-serialize" as rustc_serialize;
 extern crate flate2;
 
 extern crate "nalgebra" as na;
@@ -23,14 +23,16 @@ extern crate kiss3d;
 extern crate glfw;
 extern crate parview;
 
-use serialize::{json, Encodable, Decodable};
+use rustc_serialize::{json, Encodable, Decodable};
 use flate2::reader::GzDecoder;
 use std::rand::random;
 use std::io::{File,BufferedWriter,BufferedReader};
 
 use kiss3d::window::Window;
+use glfw::{WindowEvent,Key};
 
 use parview::{Sphere,Frame,rand_vec};
+
 
 /// Generate an example json file
 pub fn generate_frame() {
@@ -72,7 +74,7 @@ pub fn generate_frame() {
         let mut encoder = json::PrettyEncoder::new(&mut file);
         match framevec.encode(&mut encoder) {
             Ok(()) => (),
-            Err(e) => fail!("json encoding error: {}", e)
+            Err(e) => panic!("json encoding error: {}", e)
         };
     }
 }
@@ -95,7 +97,7 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
             let mut caps = cube.add_capsule(0.01, 1.0);
             caps.append_translation(t);
             match rot {
-                &Some(ref r) => {caps.append_rotation(&(r * std::f32::consts::FRAC_PI_2))},
+                &Some(r) => {caps.append_rotation(&(r * std::f32::consts::FRAC_PI_2))},
                 &None => {}
             }
             //caps.append_translation(&Vec3::new(-0.5, 0.0, -0.5));
@@ -159,11 +161,11 @@ Arguments:
     <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
 ", 
     flag_g : bool, 
-    arg_file : Option<String>)
+    arg_file : Option<String>);
 
 /// Main entry point, now using test_frame.json
 pub fn main() {
-    let args: Args = docopt::FlagParser::parse().unwrap_or_else(|e| e.exit());
+    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     if args.flag_g {
         generate_frame()
     }
@@ -181,7 +183,7 @@ pub fn main() {
     let mut arc_ball     = kiss3d::camera::ArcBall::new(eye, at);
 
     //window.set_background_color(1.0, 1.0, 1.0);
-    window.set_light(kiss3d::light::StickToCamera);
+    window.set_light(kiss3d::light::Light::StickToCamera);
     window.set_framerate_limit(Some(20));
     
     let mut nodes = parview::SphereNodes::new(f.spheres.iter(), &mut window);
@@ -196,37 +198,37 @@ pub fn main() {
     while window.render_with_camera(&mut arc_ball) {
         for mut event in window.events().iter() {
             match event.value {
-                glfw::KeyEvent(glfw::KeyQ, _, glfw::Release, _) => {
+                WindowEvent::Key(Key::Q, _, glfw::Action::Release, _) => {
                     return;
                 },
-                glfw::KeyEvent(glfw::KeyComma, _, glfw::Release, _) => {
+                WindowEvent::Key(Key::Comma, _, glfw::Action::Release, _) => {
                     timer.slower();
                     event.inhibited = true; // override the default keyboard handler
                 },
-                glfw::KeyEvent(glfw::KeyPeriod, _, glfw::Release, _) => {
+                WindowEvent::Key(Key::Period, _, glfw::Action::Release, _) => {
                     timer.faster();
                     event.inhibited = true; // override the default keyboard handler
                 },
-                glfw::KeyEvent(glfw::KeyF, _, glfw::Release, _) => {
+                WindowEvent::Key(Key::F, _, glfw::Action::Release, _) => {
                     timer.switch_direction();
                     event.inhibited = true; // override the default keyboard handler
                 }
-                glfw::KeyEvent(glfw::KeyUp, _, glfw::Release, _) => {
+                WindowEvent::Key(Key::Up, _, glfw::Action::Release, _) => {
                     arc_ball.set_pitch(3.14159/3.);
                     arc_ball.set_yaw(3.14159/4.);
                     event.inhibited = true // override the default keyboard handler
                 },
-                glfw::KeyEvent(glfw::KeyDown, _, glfw::Release, _) => {
+                WindowEvent::Key(Key::Down, _, glfw::Action::Release, _) => {
                     arc_ball.set_pitch(3.14159/2.);
                     arc_ball.set_yaw(3.14159/2.);
                     event.inhibited = true // override the default keyboard handler
                 },
-                glfw::KeyEvent(glfw::KeyW, _, glfw::Release, _) => {
-                    println!("yaw: {:6.2f}, pitch: {:6.2f}", arc_ball.yaw(), arc_ball.pitch());
+                WindowEvent::Key(Key::W, _, glfw::Action::Release, _) => {
+                    println!("yaw: {:6.2}, pitch: {:6.2}", arc_ball.yaw(), arc_ball.pitch());
                     //~ println!("Do not try to press escape: the event is inhibited!");
                     event.inhibited = true // override the default keyboard handler
                 },
-                glfw::KeyEvent(code, _, glfw::Release, _) => {
+                WindowEvent::Key(code, _, glfw::Action::Release, _) => {
                     println!("You released the key with code: {}", code);
                     //~ println!("Do not try to press escape: the event is inhibited!");
                     event.inhibited = true // override the default keyboard handler
@@ -252,7 +254,7 @@ pub fn main() {
         }
         
         let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
-        window.draw_text(format!("t:{:6}, dt:{:8.2f}", i, timer.get_dt()).as_slice(),
+        window.draw_text(format!("t:{:6}, dt:{:8.2}", i, timer.get_dt()).as_slice(),
                 &text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));
     };
 }
