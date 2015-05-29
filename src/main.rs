@@ -1,7 +1,8 @@
 /*!
 # ParView
 */
-#![feature(phase)]
+#![feature(plugin)]
+// #![plugin(docopt_macros)]
 
 #![deny(non_camel_case_types)]
 #![deny(unused_parens)]
@@ -11,22 +12,25 @@
 #![deny(unused_results)]
 #![deny(unused_typecasts)]
 
-#[phase(plugin)]
-extern crate docopt_macros;
+// extern crate docopt_macros;
 extern crate docopt;
 
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rand;
+extern crate rustc_serialize;
 extern crate flate2;
 
-extern crate "nalgebra" as na;
+extern crate nalgebra as na;
 extern crate kiss3d;
 extern crate glfw;
 extern crate parview;
 
 use rustc_serialize::{json, Encodable, Decodable};
-use flate2::reader::GzDecoder;
-use std::rand::random;
-use std::io::{File,BufferedWriter,BufferedReader};
+use rustc_serialize::json::{Json, DecoderError, ParserError};
+use flate2::read::GzDecoder;
+use rand::random;
+use std::fs::File;
+use std::path::Path;
+use std::io::{BufWriter,BufReader,Write,Read};
 
 use kiss3d::window::Window;
 use glfw::{WindowEvent,Key};
@@ -36,18 +40,20 @@ use parview::{Sphere,Frame,rand_vec};
 
 /// Generate an example json file
 pub fn generate_frame() {
+    let spheres = (0..16).map(|_| {
+        let loc : na::Vec3<f32> = rand_vec();
+        let s : f32 = random();
+        Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, color:None}
+    }).collect();
+
     let f = Frame {
-        spheres : Vec::from_fn(16, |_| {
-            let loc : na::Vec3<f32> = rand_vec();
-            let s : f32 = random();
-            Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, color:None}
-        }),
+        spheres : spheres,
         text : None
     };
-    
+
     let mut framevec : Vec<Frame> = vec!();
-    
-    for i in range(0u,40u){
+
+    for i in (0usize..40usize){
         let mut f2 = Frame {
             spheres : f.spheres.iter().enumerate().map(|(n, &s)| {
                     let mut newr = s.radius;
@@ -60,23 +66,20 @@ pub fn generate_frame() {
                 }).collect(),
             text : Some(format!("Frame {} with {} spheres", i, f.spheres.len()))
         };
-        
+
         if i > 10 && i < 20 {
             let l = f2.spheres.len();
             f2.spheres.truncate(l - 8);
         }
         framevec.push(f2);
     }
-    
+
     let path = Path::new("test_frame.json");
-    let mut file = BufferedWriter::new(File::create(&path));
-    {
-        let mut encoder = json::PrettyEncoder::new(&mut file);
-        match framevec.encode(&mut encoder) {
-            Ok(()) => (),
-            Err(e) => panic!("json encoding error: {}", e)
-        };
-    }
+    let mut file = File::create(&path).unwrap();
+
+    let val : String = json::encode(&framevec).unwrap();
+
+    write!(file, "{}", val);
 }
 
 fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
@@ -90,7 +93,7 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
         .iter()
         .map(|&(x,z)| na::Vec3::new(x,0.0,z))
         .collect();
-    
+
     let mut cube = window.add_group();
     for rot in rotations.iter() {
         for t in translations.iter() {
@@ -104,53 +107,52 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
         }
     }
     cube.set_color(1.0, 0.0, 0.0);
-    
+
     cube
 }
 
-fn open_file(path : &Path) -> std::io::IoResult<Vec<Frame>> {
-    let mut buf = BufferedReader::new(File::open(path));
+fn open_file(path : &Path) -> Result<Vec<Frame>, Box<std::error::Error>> {
+    let mut buf : BufReader<File> = BufReader::new(try!(File::open(path)));
+    // let f = try!(File::open(path));
+
     //~ let coded = json::from_reader(&mut buf).unwrap();
     //~ let mut decoder =json::Decoder::new(coded);
     //~ let frames: Vec<Frame> = Decodable::decode(&mut decoder).unwrap();
-    
-    let coded_opt = match path.extension(){
-        Some(b"gz") => match GzDecoder::new(buf) {
-                Err(e) => {return Err(e);}
-                Ok(mut gzbuf) => {json::from_reader(&mut gzbuf)}
+
+    let ext : Option<&str> = path.extension().and_then(|s| {s.to_str()});
+
+    if ext == Some("gz") {
+        println!("gz ext!");
+    }
+
+    let coded_opt = match ext {
+        Some("gz") => {
+            let mut gzbuf = try!(GzDecoder::new(buf));
+            Json::from_reader(&mut gzbuf)
         },
         _ => {
-            json::from_reader(&mut buf)
+            Json::from_reader(&mut buf)
             }
     };
-    
-    let json_result = match coded_opt {
-        Err(e) => {
-            return Err(std::io::IoError{
-                kind: std::io::InvalidInput,
-                desc: "Parser Error",
-                detail: Some(format!("{}", e))
-            });
-        }
-        Ok(coded) => {
-            let mut decoder =json::Decoder::new(coded);
-            Decodable::decode(&mut decoder)
-        }
-    };
-    
-    match json_result {
-        Ok(frames) => Ok(frames),
-        Err(e) =>  Err(
-            std::io::IoError{
-                kind: std::io::InvalidInput,
-                desc: "Decoder Error",
-                detail: Some(format!("{}", e))
-            }
-        )
-    }
+
+    let coded = try!(coded_opt);
+
+    let mut decoder = json::Decoder::new(coded);
+    let json_result = try!(Decodable::decode(&mut decoder));
+
+    return Ok(json_result);
 }
 
-docopt!(Args, "
+// docopt!
+
+#[derive(RustcDecodable, Debug)]
+struct Args {
+    flag_g : bool,
+    arg_file : Option<String>
+}
+
+// Write the Docopt usage string.
+static USAGE: &'static str = "
 Usage: parview [-h | --help] [-g] [<file>]
 
 Options:
@@ -159,22 +161,23 @@ Options:
 
 Arguments:
     <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
-", 
-    flag_g : bool, 
-    arg_file : Option<String>);
-
+";
 /// Main entry point, now using test_frame.json
 pub fn main() {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = docopt::Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|e| e.exit());
+    // with docopt! macro
+    // let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     if args.flag_g {
         generate_frame()
     }
-    
+
     let path = Path::new(args.arg_file.unwrap_or("test_frame.json".to_string()));
     let frames = open_file(&path).unwrap();
-    
+
     let ref f : Frame = frames[0];
-    
+
     let mut window = Window::new(format!("Parviewer: {}", path.as_str()).as_slice());
     let _ = draw_cube(&mut window);
 
@@ -185,16 +188,16 @@ pub fn main() {
     //window.set_background_color(1.0, 1.0, 1.0);
     window.set_light(kiss3d::light::Light::StickToCamera);
     window.set_framerate_limit(Some(20));
-    
+
     let mut nodes = parview::SphereNodes::new(f.spheres.iter(), &mut window);
-    
+
     let mut lastframe = -1;
     let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
     let mut text = None;
-    
+
     let fontsize =48;
     let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), fontsize);
-    
+
     while window.render_with_camera(&mut arc_ball) {
         for mut event in window.events().iter() {
             match event.value {
@@ -236,23 +239,23 @@ pub fn main() {
                 _ => {}
             }
         }
-                
+
         let i = timer.incr();
-        
+
         if lastframe != i {
             let ref frame = frames[i];
             text = frame.text.clone();
             nodes.update(frame.spheres.iter(), &mut window);
             lastframe = i;
         }
-        
+
         match text {
             Some(ref t) => {
                 window.draw_text(t.as_slice(), &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
             }
             None => {}
         }
-        
+
         let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
         window.draw_text(format!("t:{:6}, dt:{:8.2}", i, timer.get_dt()).as_slice(),
                 &text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));

@@ -9,21 +9,20 @@
 #![deny(unused_qualifications)]
 #![deny(missing_docs)]
 #![deny(unused_results)]
-#![deny(unused_typecasts)]
 
-extern crate "rustc-serialize" as rustc_serialize;
-//extern crate serialize;
+extern crate rustc_serialize;
+extern crate rand;
 
-extern crate "nalgebra" as na;
+extern crate nalgebra as na;
 extern crate kiss3d;
 
 //use na::{Indexable,Iterable};
 
 //use serialize::{json, Encodable};
-use std::rand::random;
+use rand::random;
 //use std::io;
 
-#[deriving(RustcDecodable, RustcEncodable, Copy, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
 /// A single frame, containing spheres
 /// format is (location, radius, Option(color triple))
 pub struct Sphere {
@@ -44,7 +43,7 @@ impl Sphere {
             color : color
         }
     }
-    
+
     /// get the location as a Vec3
     pub fn x(&self) -> na::Vec3<f32> {
         let (x,y,z) = self.loc;
@@ -52,7 +51,7 @@ impl Sphere {
     }
 }
 
-#[deriving(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone)]
 /// A single frame, which is a series of spheres
 pub struct Frame {
     /// the spheres
@@ -63,7 +62,7 @@ pub struct Frame {
 
 /// A random Vec3<f32>, with coordinates in (-0.5, 0.5)
 pub fn rand_vec() -> na::Vec3<f32> {
-    na::Vec3::new(random(), random(), random()) - na::Vec3::new(0.5f32, 0.5f32, 0.5f32)
+    na::Vec3::new(random::<f32>(), random(), random()) - na::Vec3::new(0.5f32, 0.5f32, 0.5f32)
 }
 
 /// Tracks the drawn sphere objects
@@ -72,7 +71,7 @@ pub struct SphereNodes {
 }
 
 /// Default colors for the spheres
-static DEFAULT_COLORS : [(f32, f32, f32), ..11] = [
+static DEFAULT_COLORS : [(f32, f32, f32); 11] = [
             (1.,1.,1.),
             (0.,0.,0.),
             (0.8941, 0.1020, 0.1098),
@@ -87,15 +86,16 @@ static DEFAULT_COLORS : [(f32, f32, f32), ..11] = [
 
 impl SphereNodes {
     /// New set of spheres
-    pub fn new<'a, T : Iterator<&'a Sphere>>(sphere_iter : T, window : &mut kiss3d::window::Window) -> SphereNodes {
+    pub fn new<'a, T : Iterator<Item=&'a Sphere>>(sphere_iter : T,
+            window : &mut kiss3d::window::Window) -> SphereNodes {
         let sphere_set = vec!();
         let mut sn = SphereNodes { spheres : sphere_set };
         sn.update(sphere_iter, window);
         sn
     }
-    
+
     /// Update the drawn spheres to match the data
-    pub fn update<'a, T : Iterator<&'a Sphere>>(&mut self, sphere_iter : T, window : &mut kiss3d::window::Window) {
+    pub fn update<'a, T : Iterator<Item=&'a Sphere>>(&mut self, sphere_iter : T, window : &mut kiss3d::window::Window) {
         let mut maxn = 0;
         for (n, ref sphere) in sphere_iter.enumerate() {
             match n >= self.spheres.len() {
@@ -106,24 +106,24 @@ impl SphereNodes {
                     self.spheres.push(news);
                 }
             };
-            
+
             let (r,g,b) = match sphere.color {
                 Some((r,g,b)) => (r as f32 / 255., g as f32 / 255., b as f32 / 255.),
                 None => DEFAULT_COLORS[n % DEFAULT_COLORS.len()]
             };
-            
+
             let s : &mut kiss3d::scene::SceneNode = self.spheres.get_mut(n).unwrap();
             s.set_color(r,g,b);
             s.set_local_translation(sphere.x());
             s.set_local_scale(sphere.radius, sphere.radius, sphere.radius);
-            
+
             maxn = n;
         }
-        
-        for s in self.spheres.slice_from_mut(maxn).iter_mut() {
+
+        for s in self.spheres[maxn..].iter_mut() {
             s.unlink();
         }
-        
+
         self.spheres.truncate(maxn);
     }
 }
@@ -132,8 +132,8 @@ impl SphereNodes {
 pub struct Timer {
     dts : Vec<f32>, // possible dt values
     /// DEBUG
-    pub dti : int, // which of dts we're talking about. 0 is stop, 1 => dts[0], -1 => -dts[0]
-    len : Option<uint>, // length of what we're iterating over
+    pub dti : isize, // which of dts we're talking about. 0 is stop, 1 => dts[0], -1 => -dts[0]
+    len : Option<usize>, // length of what we're iterating over
     /// DEBUG
     pub t : f32, // current index
     //~ loop_around : enum {
@@ -145,13 +145,13 @@ pub struct Timer {
 
 impl Timer {
     /// Make a new timer
-    pub fn new(dts : Vec<f32>, len : Option<uint>) -> Timer {
+    pub fn new(dts : Vec<f32>, len : Option<usize>) -> Timer {
         let new_dts = if dts.len() == 0 {
             vec!(1f32)
         } else {
             dts
         };
-        
+
         Timer {
             dts: new_dts,
             dti: 1,
@@ -159,23 +159,23 @@ impl Timer {
             t : 0.0,
         }
     }
-    
+
     /// Switch forwards vs. backwards. If stopped, it stays stopped.
     pub fn switch_direction(&mut self) {
         self.dti = -self.dti;
     }
-    
+
     /// Increment faster
     pub fn faster(&mut self) {
         self.dti = match self.dti {
             0 => 1,
-            i if i >= self.dts.len() as int => self.dts.len() as int,
-            i if i <= -(self.dts.len() as int) => -(self.dts.len() as int),
+            i if i >= self.dts.len() as isize => self.dts.len() as isize,
+            i if i <= -(self.dts.len() as isize) => -(self.dts.len() as isize),
             i if i > 0 => i+1,
             i => i-1
         };
     }
-    
+
     /// Increment slower
     pub fn slower(&mut self) {
         self.dti = match self.dti {
@@ -184,22 +184,22 @@ impl Timer {
             i => i+1
         };
     }
-    
+
     /// Get current dt
     pub fn get_dt(&self) -> f32{
         match self.dti {
             0 => 0.,
-            i if i > 0 => self.dts[(i-1) as uint],
-            i => -self.dts[(1-i) as uint]
+            i if i > 0 => self.dts[(i-1) as usize],
+            i => -self.dts[(1-i) as usize]
         }
     }
-    
-    
+
+
     /// Increment the timer, and return current index
-    pub fn incr(&mut self) -> uint {
+    pub fn incr(&mut self) -> usize {
         self.t += self.get_dt();
-        
-        let ix = self.t as uint;
+
+        let ix = self.t as usize;
         match self.len {
             None => {ix},
             Some(l) => ix % l
