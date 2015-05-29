@@ -1,7 +1,7 @@
 /*!
 # ParView
 */
-#![feature(plugin)]
+// #![feature(plugin)]
 // #![plugin(docopt_macros)]
 
 #![deny(non_camel_case_types)]
@@ -10,7 +10,6 @@
 #![deny(unused_qualifications)]
 #![deny(missing_docs)]
 #![deny(unused_results)]
-#![deny(unused_typecasts)]
 
 // extern crate docopt_macros;
 extern crate docopt;
@@ -79,7 +78,7 @@ pub fn generate_frame() {
 
     let val : String = json::encode(&framevec).unwrap();
 
-    write!(file, "{}", val);
+    let _ = write!(file, "{}", val);
 }
 
 fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
@@ -173,12 +172,18 @@ pub fn main() {
         generate_frame()
     }
 
-    let path = Path::new(args.arg_file.unwrap_or("test_frame.json".to_string()));
+    let fname : String = match args.arg_file {
+        Some(s) => s,
+        None => std::str::FromStr::from_str("test_frame.json").unwrap()
+    };
+
+    let path = Path::new(&*fname);
     let frames = open_file(&path).unwrap();
 
     let ref f : Frame = frames[0];
 
-    let mut window = Window::new(format!("Parviewer: {}", path.as_str()).as_slice());
+    let title : String = format!("Parviewer: {}", path.to_string_lossy());
+    let mut window = Window::new(&*title);
     let _ = draw_cube(&mut window);
 
     let eye              = na::Pnt3::new(0.0f32, 0.0, 2.0);
@@ -201,40 +206,32 @@ pub fn main() {
     while window.render_with_camera(&mut arc_ball) {
         for mut event in window.events().iter() {
             match event.value {
-                WindowEvent::Key(Key::Q, _, glfw::Action::Release, _) => {
-                    return;
-                },
-                WindowEvent::Key(Key::Comma, _, glfw::Action::Release, _) => {
-                    timer.slower();
-                    event.inhibited = true; // override the default keyboard handler
-                },
-                WindowEvent::Key(Key::Period, _, glfw::Action::Release, _) => {
-                    timer.faster();
-                    event.inhibited = true; // override the default keyboard handler
-                },
-                WindowEvent::Key(Key::F, _, glfw::Action::Release, _) => {
-                    timer.switch_direction();
-                    event.inhibited = true; // override the default keyboard handler
-                }
-                WindowEvent::Key(Key::Up, _, glfw::Action::Release, _) => {
-                    arc_ball.set_pitch(3.14159/3.);
-                    arc_ball.set_yaw(3.14159/4.);
-                    event.inhibited = true // override the default keyboard handler
-                },
-                WindowEvent::Key(Key::Down, _, glfw::Action::Release, _) => {
-                    arc_ball.set_pitch(3.14159/2.);
-                    arc_ball.set_yaw(3.14159/2.);
-                    event.inhibited = true // override the default keyboard handler
-                },
-                WindowEvent::Key(Key::W, _, glfw::Action::Release, _) => {
-                    println!("yaw: {:6.2}, pitch: {:6.2}", arc_ball.yaw(), arc_ball.pitch());
-                    //~ println!("Do not try to press escape: the event is inhibited!");
-                    event.inhibited = true // override the default keyboard handler
-                },
-                WindowEvent::Key(code, _, glfw::Action::Release, _) => {
-                    println!("You released the key with code: {}", code);
-                    //~ println!("Do not try to press escape: the event is inhibited!");
-                    event.inhibited = true // override the default keyboard handler
+                WindowEvent::Key(key, _, glfw::Action::Release, _) => {
+                    // Default to inhibiting, although this can be overridden
+                    let mut inhibit = true;
+                    match key {
+                        Key::Q => {return;},
+                        Key::Comma => {timer.slower();},
+                        Key::Period => {timer.faster();},
+                        Key::F => {timer.switch_direction();},
+                        Key::Up => {
+                            arc_ball.set_pitch(3.14159/3.);
+                            arc_ball.set_yaw(3.14159/4.);
+                        },
+                        Key::Down => {
+                            arc_ball.set_pitch(3.14159/2.);
+                            arc_ball.set_yaw(3.14159/2.);
+                        },
+                        Key::W => {
+                            println!("yaw: {:6.2}, pitch: {:6.2}", arc_ball.yaw(), arc_ball.pitch());
+                        },
+                        code => {
+                            println!("You released the key with code: {:?}", code);
+                            inhibit = false;
+                        }
+
+                    }
+                    event.inhibited = inhibit;
                 },
                 _ => {}
             }
@@ -251,13 +248,13 @@ pub fn main() {
 
         match text {
             Some(ref t) => {
-                window.draw_text(t.as_slice(), &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
+                window.draw_text(t, &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
             }
             None => {}
         }
 
         let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
-        window.draw_text(format!("t:{:6}, dt:{:8.2}", i, timer.get_dt()).as_slice(),
+        window.draw_text(&*format!("t:{:6}, dt:{:8.2}", i, timer.get_dt()),
                 &text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));
     };
 }
