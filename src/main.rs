@@ -23,13 +23,13 @@ extern crate kiss3d;
 extern crate glfw;
 extern crate parview;
 
-use rustc_serialize::{json, Encodable, Decodable};
-use rustc_serialize::json::{Json, DecoderError, ParserError};
+use rustc_serialize::{json, Decodable};
+use rustc_serialize::json::Json;
 use flate2::read::GzDecoder;
 use rand::random;
 use std::fs::File;
 use std::path::Path;
-use std::io::{BufWriter,BufReader,Write,Read};
+use std::io::{BufReader,Write};
 
 use kiss3d::window::Window;
 use glfw::{WindowEvent,Key};
@@ -200,7 +200,8 @@ pub fn main() {
     let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
     let mut text = None;
 
-    let fontsize =48;
+    //TODO: Include this font as an asset
+    let fontsize = 48;
     let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), fontsize);
 
     while window.render_with_camera(&mut arc_ball) {
