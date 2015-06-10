@@ -9,11 +9,7 @@ docopt = "*"
 nalgebra = "*"
 rustc-serialize = "*"
 rand = "*"
-
-[dependencies.glfw]
-# Taken from kiss3d/Cargo.toml
-git = "https://github.com/bjz/glfw-rs"
-default-features = false
+glfw = "*"
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"
