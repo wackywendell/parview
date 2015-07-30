@@ -22,34 +22,10 @@ extern crate kiss3d;
 use rand::random;
 //use std::io;
 
-#[derive(RustcDecodable, RustcEncodable, Copy, Clone)]
-/// A single frame, containing spheres
-/// format is (location, radius, Option(color triple))
-pub struct Sphere {
-    /// location of the sphere
-    pub loc : (f32,f32,f32),
-    /// Radius
-    pub radius : f32,
-    /// Color. if none, one will be assigned
-    pub color : Option<(u8,u8,u8)>,
-}
-
-impl Sphere {
-    /// Make a new sphere
-    pub fn new(loc : na::Vec3<f32>, radius : f32, color : Option<(u8,u8,u8)>) -> Sphere {
-        Sphere {
-            loc :  (loc[0], loc[1], loc[2]), //loc.iter().collect(),
-            radius : radius,
-            color : color
-        }
-    }
-
-    /// get the location as a Vec3
-    pub fn x(&self) -> na::Vec3<f32> {
-        let (x,y,z) = self.loc;
-        na::Vec3::new(x,y,z)
-    }
-}
+pub mod objects;
+pub use objects::Sphere;
+pub mod palette;
+pub use palette::Palette;
 
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 /// A single frame, which is a series of spheres
@@ -65,70 +41,7 @@ pub fn rand_vec() -> na::Vec3<f32> {
     na::Vec3::new(random::<f32>(), random(), random()) - na::Vec3::new(0.5f32, 0.5f32, 0.5f32)
 }
 
-/// Tracks the drawn sphere objects
-pub struct SphereNodes {
-    spheres : Vec<kiss3d::scene::SceneNode>
-}
-
-/// Default colors for the spheres
-static DEFAULT_COLORS : [(f32, f32, f32); 11] = [
-            (1.,1.,1.),
-            (0.,0.,0.),
-            (0.8941, 0.1020, 0.1098),
-            (0.2157, 0.4941, 0.7216),
-            (0.3020, 0.6863, 0.2902),
-            (0.5961, 0.3059, 0.6392),
-            (1.0000, 0.4980, 0.0000),
-            (0.6510, 0.3373, 0.1569),
-            (0.9686, 0.5059, 0.7490),
-            (0.6000, 0.6000, 0.6000),
-            (1.0000, 1.0000, 0.2000)];
-
-impl SphereNodes {
-    /// New set of spheres
-    pub fn new<'a, T : Iterator<Item=&'a Sphere>>(sphere_iter : T,
-            window : &mut kiss3d::window::Window) -> SphereNodes {
-        let sphere_set = vec!();
-        let mut sn = SphereNodes { spheres : sphere_set };
-        sn.update(sphere_iter, window);
-        sn
-    }
-
-    /// Update the drawn spheres to match the data
-    pub fn update<'a, T : Iterator<Item=&'a Sphere>>(&mut self, sphere_iter : T, window : &mut kiss3d::window::Window) {
-        let mut maxn = 0;
-        for (n, ref sphere) in sphere_iter.enumerate() {
-            match n >= self.spheres.len() {
-                false => {}
-                true => {
-                    // new sphere!
-                    let news = window.add_sphere(sphere.radius);
-                    self.spheres.push(news);
-                }
-            };
-
-            let (r,g,b) = match sphere.color {
-                Some((r,g,b)) => (r as f32 / 255., g as f32 / 255., b as f32 / 255.),
-                None => DEFAULT_COLORS[n % DEFAULT_COLORS.len()]
-            };
-
-            let s : &mut kiss3d::scene::SceneNode = self.spheres.get_mut(n).unwrap();
-            s.set_color(r,g,b);
-            s.set_local_translation(sphere.x());
-            s.set_local_scale(sphere.radius, sphere.radius, sphere.radius);
-
-            maxn = n;
-        }
-
-        for s in self.spheres[maxn..].iter_mut() {
-            s.unlink();
-        }
-
-        self.spheres.truncate(maxn);
-    }
-}
-
-///
+/// Timer
 pub struct Timer {
     dts : Vec<f32>, // possible dt values
     /// DEBUG
