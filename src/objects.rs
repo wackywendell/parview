@@ -2,6 +2,8 @@
 
 extern crate nalgebra as na;
 
+//use rustc_serialize::json::{self, Json, ToJson};
+use rustc_serialize::{Encoder,Encodable,Decoder,Decodable};
 use kiss3d::scene::SceneNode;
 use kiss3d::window::Window;
 use std::collections::HashSet;
@@ -17,8 +19,28 @@ use palette::Palette;
 /// For example, a protein might have levels:
 /// ResidueName → ResidueNumber → Element → AtomName
 /// Each must be unique.
-#[derive(RustcDecodable, RustcEncodable,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
-pub struct ObjectID(Vec<String>);
+#[derive(Debug,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
+pub struct ObjectID(pub Vec<String>);
+
+impl Encodable for ObjectID {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        let &ObjectID(ref names) = self;
+        names.encode(s)
+    }
+}
+
+impl Decodable for ObjectID {
+    fn decode<D: Decoder>(d: &mut D) -> Result<ObjectID, D::Error> {
+        Vec::decode(d).map(|n| ObjectID(n))
+    }
+}
+
+impl ObjectID{
+    /// Create a new `ObjectTracker` associated with a given `Window`.
+    pub fn new(names : Vec<String>) -> ObjectID {
+        ObjectID(names)
+    }
+}
 
 /// An object that will be drawable by Parview.
 ///
@@ -78,16 +100,17 @@ impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
                     seen.remove(name);
                 }
                 Entry::Vacant(v) => {
-                    let node = new_object.new_node(&mut self.parent);
+                    let mut node = new_object.new_node(&mut self.parent);
+                    palette.set_color(new_object.id(), &mut node);
                     let _ = v.insert((new_object.clone(), node));
                 }
             }
         }
         
         for k in seen {
-            // self.objects.get_mut(k).map(|&mut (ref mut obj, ref mut node)| {
-            //     node.unlink();
-            // });
+            let _ = self.objects.get_mut(k).map(|&mut (_, ref mut node)| {
+                let _ = node.unlink();
+            });
             let _ = self.objects.remove(k);
         }
     }

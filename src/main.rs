@@ -39,10 +39,14 @@ use parview::{Sphere,Frame,rand_vec};
 
 /// Generate an example json file
 pub fn generate_frame() {
-    let spheres = (0..16).map(|_| {
+    let spheres = (0..10).map(|n| {
         let loc : na::Vec3<f32> = rand_vec();
         let s : f32 = random();
-        Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, color:None}
+        let names = parview::objects::ObjectID(vec![
+            format!("{}", n / 2 + 1),
+            format!("{}", n % 2 + 1)
+        ]);
+        Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, names:names}
     }).collect();
 
     let f = Frame {
@@ -54,14 +58,19 @@ pub fn generate_frame() {
 
     for i in (0usize..40usize){
         let mut f2 = Frame {
-            spheres : f.spheres.iter().enumerate().map(|(n, &s)| {
+            spheres : f.spheres.iter().enumerate().map(|(n, ref s)| {
                     let mut newr = s.radius;
-                    let mut color = s.color;
                     if n == 0 {
                         newr = random::<f32>() * 0.2f32;
-                        color = Some((random::<u8>(), random::<u8>(), random::<u8>()));
                     }
-                    Sphere::new(s.x() + (rand_vec() * 0.1f32), newr, color)
+                    let (sx, sy, sz) = s.loc;
+                    let na::Vec3{x, y, z} = na::Vec3::new(sx, sy, sz) + 
+                        (rand_vec() * 0.1f32);
+                    Sphere {
+                        loc: (x, y, z), 
+                        radius: newr,
+                        names: s.names.clone()
+                    }
                 }).collect(),
             text : Some(format!("Frame {} with {} spheres", i, f.spheres.len()))
         };
@@ -69,6 +78,7 @@ pub fn generate_frame() {
         if i > 10 && i < 20 {
             let l = f2.spheres.len();
             f2.spheres.truncate(l - 8);
+            f2.text = Some(format!("Frame {} with {} spheres", i, f2.spheres.len()));
         }
         framevec.push(f2);
     }
@@ -76,7 +86,8 @@ pub fn generate_frame() {
     let path = Path::new("test_frame.json");
     let mut file = File::create(&path).unwrap();
 
-    let val : String = json::encode(&framevec).unwrap();
+    // let val : String = json::encode(&framevec).unwrap();
+    let val = json::as_pretty_json(&framevec);
 
     let _ = write!(file, "{}", val);
 }
@@ -180,7 +191,7 @@ pub fn main() {
     let path = Path::new(&*fname);
     let frames = open_file(&path).unwrap();
 
-    let ref f : Frame = frames[0];
+    // let ref f : Frame = frames[0];
 
     let title : String = format!("Parviewer: {}", path.to_string_lossy());
     let mut window = Window::new(&*title);
@@ -194,7 +205,8 @@ pub fn main() {
     window.set_light(kiss3d::light::Light::StickToCamera);
     window.set_framerate_limit(Some(20));
 
-    let mut nodes = parview::SphereNodes::new(f.spheres.iter(), &mut window);
+    let mut nodes = parview::ObjectTracker::new(&mut window);
+    let palette = parview::Palette::default();
 
     let mut lastframe = -1;
     let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
@@ -243,7 +255,7 @@ pub fn main() {
         if lastframe != i {
             let ref frame = frames[i];
             text = frame.text.clone();
-            nodes.update(frame.spheres.iter(), &mut window);
+            nodes.update(frame.spheres.iter(), &palette);
             lastframe = i;
         }
 

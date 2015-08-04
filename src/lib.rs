@@ -23,7 +23,7 @@ use rand::random;
 //use std::io;
 
 pub mod objects;
-pub use objects::Sphere;
+pub use objects::{ObjectTracker,ObjectID,Sphere};
 pub mod palette;
 pub use palette::Palette;
 
