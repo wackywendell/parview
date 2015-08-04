@@ -40,7 +40,7 @@ use parview::{Sphere,Frame,rand_vec};
 
 /// Generate an example json file
 pub fn generate_frame() {
-    let spheres = (0..10).map(|n| {
+    let spheres = (0..16).map(|n| {
         let loc : na::Vec3<f32> = rand_vec();
         let s : f32 = random();
         let names = parview::objects::ObjectID(vec![
@@ -287,7 +287,7 @@ pub fn main() {
         if lastframe != i {
             let ref frame = frames[i];
             text = frame.text.clone();
-            nodes.update(frame.spheres.iter(), &palette);
+            nodes.update(frame.spheres.iter(), &mut palette);
             lastframe = i;
         }
 

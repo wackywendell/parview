@@ -83,7 +83,7 @@ impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
     
     /// The meat of `ObjectTracker`. Update old objects and the scene to match
     /// new objects
-    pub fn update<I : Iterator<Item=&'a T>>(&mut self, iter : I, palette : &Palette) {
+    pub fn update<I : Iterator<Item=&'a T>>(&mut self, iter : I, palette : &mut Palette) {
         let mut seen : HashSet<&ObjectID> = FromIterator::from_iter(self.objects.keys().map(|&k|{k}));
         
         for new_object in iter {

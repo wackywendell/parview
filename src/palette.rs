@@ -1,7 +1,6 @@
 //! A palette for use with Objects
 
-use std::hash;
-use std::hash::{Hash,Hasher};
+use std::collections::HashMap;
 use std::iter::{repeat,FromIterator};
 
 use kiss3d::scene::SceneNode;
@@ -13,17 +12,17 @@ use objects::ObjectID;
 pub struct Color(u8,u8,u8);
 
 pub static DEFAULT_COLORS : [(u8, u8, u8); 11] = [
-    (255, 255, 255), // White
-    (  0,   0,   0), // Black
-    (228,  26,  28), // Red
-    ( 55, 126, 184), // Blue
     ( 77, 175,  74), // Green
     (152,  78, 163), // Purple
     (255, 127,   0), // Orange
+    (228,  26,  28), // Red
+    ( 55, 126, 184), // Blue
     (166,  86,  40), // Brown
     (247, 129, 191), // Pink
     (153, 153, 153), // Gray
     (255, 255,  51), // Yellow
+    (255, 255, 255), // White
+    (  0,   0,   0), // Black
 ];
 
 impl Color {
@@ -53,12 +52,24 @@ impl PartialIDer {
     }
     
     /// Get the portion of an ID
-    fn partial<'a>(&self, name: &'a ObjectID) -> Vec<&'a str> {
+    pub fn partial<'a>(&self, name: &'a ObjectID) -> Vec<&'a str> {
         let &ObjectID(ref names) = name;
         names.iter()
             .zip(self.bools.iter())
             .filter_map(|(n, &b)| if b {Some(&n[..])} else {None})
             .collect()
+    }
+    
+    /// Get the portion of an ID
+    pub fn as_id(&self, name: &ObjectID) -> ObjectID {
+        let &ObjectID(ref names) = name;
+        ObjectID(
+            names
+            .iter()
+            .zip(self.bools.iter())
+            .filter_map(|(n, &b)| if b {Some(n.clone())} else {None})
+            .collect()
+        )
     }
     
     /// Get a string representing the current state
@@ -78,27 +89,35 @@ pub struct Palette {
     default_colors : Vec<Color>,
     partials : PartialIDer,
     // TODO: have a way to map names → colors
+    
+    assigned : HashMap<ObjectID, Color>,
+    next_color : usize
 }
 
 impl Palette {
     /// Set the color of an object to match what the palette says
-    pub fn set_color(&self, name: &ObjectID, node: &mut SceneNode) {
-        let (r, g, b) = self.get_default(name).to_floats();
+    pub fn set_color(&mut self, name: &ObjectID, node: &mut SceneNode) {
+        let (r, g, b) = self.get_color(name).to_floats();
         node.set_color(r, g, b);
     }
     
-    /// Get the default color for an object with a given name. Based on hashing.
-    pub fn get_default(&self, name: &ObjectID) -> Color {
-        let mut hasher = hash::SipHasher::new();
-        self.partials.partial(name).hash(&mut hasher);
-        let hash = hasher.finish();
-        let n = (hash as usize) % self.default_colors.len();
-        self.default_colors[n]
+    /// Get the color for a particular ID (using partials mask)
+    pub fn get_color(&mut self, name: &ObjectID) -> Color {
+        let partial = self.partials.as_id(name);
+        let (next_color, default_colors, assigned) = 
+            (&mut self.next_color, &self.default_colors, &mut self.assigned);
+        let color = *assigned.entry(partial).or_insert_with(|| {
+            let col = default_colors[*next_color];
+            *next_color = (*next_color + 1) % default_colors.len();
+            col
+        });
+        return color
     }
     
     /// Toggle whether or not to use a certain partial value
     pub fn toggle_partial(&mut self, n : usize){
         self.partials.bools[n] = !self.partials.bools[n];
+        self.next_color = 0;
     }
     
     /// Check value of a certain partial
@@ -109,6 +128,7 @@ impl Palette {
     /// Check value of a certain partial
     pub fn set_partial(&mut self, n : usize, value : bool){
         self.partials.bools[n] = value;
+        self.next_color = 0;
     }
     
     /// Check value of a certain partial
@@ -117,6 +137,7 @@ impl Palette {
         for i in 0..n {
             self.partials.bools[i] = value;
         }
+        self.next_color = 0;
     }
     
     /// Get a string like '_23____' for which parts of the ObjectID we are coloring with respect to
@@ -132,6 +153,8 @@ impl Default for Palette {
                 |&(r,g,b)|{Color(r,g,b)}
             )),
             partials : PartialIDer::new(8, true),
+            assigned : HashMap::new(),
+            next_color : 0
         }
     }
 }
