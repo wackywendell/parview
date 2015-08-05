@@ -15,7 +15,8 @@
 extern crate docopt;
 
 extern crate rand;
-extern crate rustc_serialize;
+extern crate rustc_serialize; // for docopt
+extern crate serde;
 extern crate flate2;
 
 extern crate nalgebra as na;
@@ -23,13 +24,12 @@ extern crate kiss3d;
 extern crate glfw;
 extern crate parview;
 
-use rustc_serialize::{json, Decodable};
-use rustc_serialize::json::Json;
+use serde::{Error};
 use flate2::read::GzDecoder;
 use rand::random;
 use std::fs::File;
 use std::path::Path;
-use std::io::{BufReader,Write};
+use std::io;
 use std::f32::consts::PI;
 
 use kiss3d::window::Window;
@@ -39,13 +39,13 @@ use parview::{Sphere,Frame,rand_vec};
 
 
 /// Generate an example json file
-pub fn generate_frame() {
+pub fn generate_frame() -> io::Result<()> {
     let spheres = (0..16).map(|n| {
         let loc : na::Vec3<f32> = rand_vec();
         let s : f32 = random();
         let names = parview::objects::ObjectID(vec![
-            format!("{}", n / 2 + 1),
-            format!("{}", n % 2 + 1)
+            format!("{}", n / 4 + 1),
+            format!("{}", n % 4 + 1)
         ]);
         Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, names:names}
     }).collect();
@@ -86,11 +86,8 @@ pub fn generate_frame() {
 
     let path = Path::new("test_frame.json");
     let mut file = File::create(&path).unwrap();
-
-    // let val : String = json::encode(&framevec).unwrap();
-    let val = json::as_pretty_json(&framevec);
-
-    let _ = write!(file, "{}", val);
+    
+    serde::json::ser::to_writer_pretty(&mut file, &framevec)
 }
 
 fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
@@ -122,8 +119,8 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
     cube
 }
 
-fn open_file(path : &Path) -> Result<Vec<Frame>, Box<std::error::Error>> {
-    let mut buf : BufReader<File> = BufReader::new(try!(File::open(path)));
+fn open_file(path : &Path) -> Result<Vec<Frame>, serde::json::error::Error> {
+    let mut buf : io::BufReader<File> = io::BufReader::new(try!(File::open(path)));
     // let f = try!(File::open(path));
 
     //~ let coded = json::from_reader(&mut buf).unwrap();
@@ -139,19 +136,14 @@ fn open_file(path : &Path) -> Result<Vec<Frame>, Box<std::error::Error>> {
     let coded_opt = match ext {
         Some("gz") => {
             let mut gzbuf = try!(GzDecoder::new(buf));
-            Json::from_reader(&mut gzbuf)
+            serde::json::de::from_reader(&mut gzbuf)
         },
         _ => {
-            Json::from_reader(&mut buf)
+            serde::json::de::from_reader(&mut buf)
             }
     };
 
-    let coded = try!(coded_opt);
-
-    let mut decoder = json::Decoder::new(coded);
-    let json_result = try!(Decodable::decode(&mut decoder));
-
-    return Ok(json_result);
+    coded_opt
 }
 
 // docopt!
@@ -193,7 +185,7 @@ pub fn main() {
     // with docopt! macro
     // let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     if args.flag_g {
-        generate_frame()
+        generate_frame().unwrap();
     }
 
     let fname : String = match args.arg_file {
@@ -226,7 +218,7 @@ pub fn main() {
     let mut nodes = parview::ObjectTracker::new(&mut window);
     let mut palette = parview::Palette::default();
     
-    let mut lastframe = -1;
+    let mut lastframe : isize = -1;
     let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
     let mut text = None;
 
@@ -284,11 +276,11 @@ pub fn main() {
 
         let i = timer.incr();
 
-        if lastframe != i {
+        if lastframe != (i as isize) {
             let ref frame = frames[i];
             text = frame.text.clone();
             nodes.update(frame.spheres.iter(), &mut palette);
-            lastframe = i;
+            lastframe = i as isize;
         }
 
         match text {

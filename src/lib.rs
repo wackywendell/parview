@@ -10,15 +10,18 @@
 #![deny(missing_docs)]
 #![deny(unused_results)]
 
-extern crate rustc_serialize;
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
+
 extern crate rand;
+extern crate serde;
 
 extern crate nalgebra as na;
 extern crate kiss3d;
 
 //use na::{Indexable,Iterable};
 
-//use serialize::{json, Encodable};
+pub use serde::{Serialize, Deserialize};
 use rand::random;
 //use std::io;
 
@@ -27,7 +30,7 @@ pub use objects::{ObjectTracker,ObjectID,Sphere};
 pub mod palette;
 pub use palette::Palette;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 /// A single frame, which is a series of spheres
 pub struct Frame {
     /// the spheres

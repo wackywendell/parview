@@ -8,7 +8,7 @@ use kiss3d::scene::SceneNode;
 use objects::ObjectID;
 
 /// An RGB color
-#[derive(RustcDecodable, RustcEncodable,Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone)]
+#[derive(Serialize,Deserialize,Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone)]
 pub struct Color(u8,u8,u8);
 
 pub static DEFAULT_COLORS : [(u8, u8, u8); 11] = [
@@ -37,7 +37,7 @@ impl Color {
 }
 
 /// A [bool] for keeping track of which part of the objectID should be used
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize,Deserialize,Debug,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
 pub struct PartialIDer {
     /// Which sections of an ObjectID should be converted
     pub bools : Vec<bool>,
@@ -84,7 +84,7 @@ impl PartialIDer {
 }
 
 /// A way to convert string names to colors
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Clone)]
 pub struct Palette {
     default_colors : Vec<Color>,
     partials : PartialIDer,

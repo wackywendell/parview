@@ -1,9 +1,10 @@
 //! The types of objects that can be drawn by ParView
 
 extern crate nalgebra as na;
+extern crate serde;
 
 //use rustc_serialize::json::{self, Json, ToJson};
-use rustc_serialize::{Encoder,Encodable,Decoder,Decodable};
+use serde::{Serialize, Serializer, Deserialize, Deserializer, Error};
 use kiss3d::scene::SceneNode;
 use kiss3d::window::Window;
 use std::collections::HashSet;
@@ -22,16 +23,16 @@ use palette::Palette;
 #[derive(Debug,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
 pub struct ObjectID(pub Vec<String>);
 
-impl Encodable for ObjectID {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl Serialize for ObjectID {
+    fn serialize<S: Serializer>(&self, s: &mut S) -> Result<(), S::Error> {
         let &ObjectID(ref names) = self;
-        names.encode(s)
+        names.serialize(s)
     }
 }
 
-impl Decodable for ObjectID {
-    fn decode<D: Decoder>(d: &mut D) -> Result<ObjectID, D::Error> {
-        Vec::decode(d).map(|n| ObjectID(n))
+impl Deserialize for ObjectID {
+    fn deserialize<D: Deserializer>(d: &mut D) -> Result<Self, D::Error> {
+        Vec::deserialize(d).map(|n| ObjectID(n))
     }
 }
 
@@ -116,7 +117,7 @@ impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
     }
 }
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 /// A single frame, containing spheres
 /// format is (location, radius, Option(color triple))
 pub struct Sphere {

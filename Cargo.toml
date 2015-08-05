@@ -7,15 +7,15 @@ authors = [ "wendell.smith@yale.edu" ]
 [dependencies]
 docopt = "*"
 nalgebra = "*"
-rustc-serialize = "*"
 rand = "*"
 glfw = "*"
+flate2 = "*"
+serde = "*"
+serde_macros = "*"
+rustc-serialize = "*"
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"
 
 [[bin]]
 name = "parviewer"
-
-[dependencies]
-flate2 = "*"
