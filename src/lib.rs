@@ -21,14 +21,20 @@ extern crate kiss3d;
 
 //use na::{Indexable,Iterable};
 
-pub use serde::{Serialize, Deserialize};
 use rand::random;
+pub use serde::{Serialize, Deserialize};
 //use std::io;
 
 pub mod objects;
 pub use objects::{ObjectTracker,ObjectID,Sphere};
 pub mod palette;
 pub use palette::Palette;
+
+/// Inconsolata font
+pub fn inconsolata(size: i32) -> std::rc::Rc<kiss3d::text::Font> {
+    let inconsolata_otf : &[u8] = include_bytes!("Inconsolata.otf");
+    kiss3d::text::Font::from_memory(inconsolata_otf, size)
+}
 
 #[derive(Deserialize, Serialize, Clone)]
 /// A single frame, which is a series of spheres

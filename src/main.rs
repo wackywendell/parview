@@ -37,9 +37,8 @@ use glfw::{WindowEvent,Key};
 
 use parview::{Sphere,Frame,rand_vec};
 
-
 /// Generate an example json file
-pub fn generate_frame() -> io::Result<()> {
+pub fn generate_frame(path : &Path) -> io::Result<()> {
     let spheres = (0..16).map(|n| {
         let loc : na::Vec3<f32> = rand_vec();
         let s : f32 = random();
@@ -84,7 +83,6 @@ pub fn generate_frame() -> io::Result<()> {
         framevec.push(f2);
     }
 
-    let path = Path::new("test_frame.json");
     let mut file = File::create(&path).unwrap();
     
     serde::json::ser::to_writer_pretty(&mut file, &framevec)
@@ -165,8 +163,8 @@ static USAGE: &'static str = "
 Usage: parview [options] [--] [<file>]
 
 Options:
-    [-h | --help]     Help and usage
-    -g                Generate test_frames.json
+    -h, --help        Help and usage
+    -g, --generate    Generate test_frames.json
     --pitch ANGLE     Set initial pitch (degrees) [default: 90]
     --yaw ANGLE       Set initial yaw (degrees) [default: 0]
     --fov ANGLE       Set camera field-of-view angle (degrees) [default: 45]
@@ -184,20 +182,19 @@ pub fn main() {
                             .unwrap_or_else(|e| e.exit());
     // with docopt! macro
     // let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    if args.flag_g {
-        generate_frame().unwrap();
-    }
-
+    
     let fname : String = match args.arg_file {
         Some(s) => s,
         None => std::str::FromStr::from_str("test_frame.json").unwrap()
     };
-
-    let path = Path::new(&*fname);
-    let frames = open_file(&path).unwrap();
-
-    // let ref f : Frame = frames[0];
-
+    let path : &Path = Path::new(&*fname);
+    
+    if args.flag_g {
+        generate_frame(path).unwrap();
+    }
+    
+    let frames = open_file(path).unwrap();
+    
     let title : String = format!("Parviewer: {}", path.to_string_lossy());
     let width : u32 = args.flag_width;
     let height : u32 = args.flag_height.unwrap_or(width);
@@ -224,7 +221,7 @@ pub fn main() {
 
     //TODO: Include this font as an asset
     let fontsize = 48;
-    let font = kiss3d::text::Font::new(&Path::new("/usr/share/fonts/OTF/Inconsolata.otf"), fontsize);
+    let font = parview::inconsolata(fontsize);
 
     while window.render_with_camera(&mut arc_ball) {
         for mut event in window.events().iter() {
@@ -282,22 +279,26 @@ pub fn main() {
             nodes.update(frame.spheres.iter(), &mut palette);
             lastframe = i as isize;
         }
-
+        
+        let text_color = na::Pnt3::new(1.0, 1.0, 1.0);
         match text {
             Some(ref t) => {
-                window.draw_text(t, &na::orig(), &font, &na::Pnt3::new(1.0, 1.0, 1.0));
+                window.draw_text(t, &na::orig(), &font, &text_color);
             }
             None => {}
         }
-
+        
+        // TODO: Figure out why the bottom is window.height() * 2.
+        // Could be HiDPI
         let text_loc = na::Pnt2::new(0.0, window.height() * 2. - (fontsize as f32));
         window.draw_text(
-                &*format!(
-                    "t:{:6}, dt:{:8.2}, coloring: {}", 
-                    i,
-                    timer.get_dt(),
-                    palette.partials_string()
-                ),
-                &text_loc, &font, &na::Pnt3::new(1.0, 1.0, 1.0));
+            &*format!(
+                "t:{:6}, dt:{:8.2}, coloring: {}", 
+                i,
+                timer.get_dt(),
+                palette.partials_string()
+            ),
+            &text_loc, &font, &text_color
+        );
     };
 }
