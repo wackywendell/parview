@@ -23,3 +23,4 @@
 rusti.sh
 test*.json
 test*.json.gz
+default_palette.toml

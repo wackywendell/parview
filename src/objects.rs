@@ -2,13 +2,13 @@
 
 extern crate nalgebra as na;
 extern crate serde;
+extern crate rustc_serialize;
 
 //use rustc_serialize::json::{self, Json, ToJson};
 use serde::{Serialize, Serializer, Deserialize, Deserializer, Error};
 use kiss3d::scene::SceneNode;
 use kiss3d::window::Window;
-use std::collections::HashSet;
-use std::collections::HashMap;
+use std::collections::{HashSet,HashMap};
 use std::collections::hash_map::Entry;
 use std::iter::FromIterator;
 
@@ -30,9 +30,22 @@ impl Serialize for ObjectID {
     }
 }
 
+impl rustc_serialize::Encodable for ObjectID {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        let &ObjectID(ref names) = self;
+        names.encode(s)
+    }
+}
+
 impl Deserialize for ObjectID {
     fn deserialize<D: Deserializer>(d: &mut D) -> Result<Self, D::Error> {
         Vec::deserialize(d).map(|n| ObjectID(n))
+    }
+}
+
+impl rustc_serialize::Decodable for ObjectID {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Vec::decode(d).map(|n| ObjectID(n))
     }
 }
 

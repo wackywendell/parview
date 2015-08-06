@@ -13,6 +13,7 @@ flate2 = "*"
 serde = "*"
 serde_macros = "*"
 rustc-serialize = "*"
+toml = "*"
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"

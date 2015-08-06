@@ -1,5 +1,8 @@
 //! A palette for use with Objects
 
+extern crate serde;
+extern crate rustc_serialize; // needed for toml
+
 use std::collections::HashMap;
 use std::iter::{repeat,FromIterator};
 
@@ -8,8 +11,8 @@ use kiss3d::scene::SceneNode;
 use objects::ObjectID;
 
 /// An RGB color
-#[derive(Serialize,Deserialize,Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone)]
-pub struct Color(u8,u8,u8);
+#[derive(Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone)]
+pub struct Color(pub u8,pub u8,pub u8);
 
 pub static DEFAULT_COLORS : [(u8, u8, u8); 11] = [
     ( 77, 175,  74), // Green
@@ -37,7 +40,9 @@ impl Color {
 }
 
 /// A [bool] for keeping track of which part of the objectID should be used
-#[derive(Serialize,Deserialize,Debug,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
+#[derive(Debug,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
+#[derive(Serialize,Deserialize)]
+#[derive(RustcDecodable,RustcEncodable)]
 pub struct PartialIDer {
     /// Which sections of an ObjectID should be converted
     pub bools : Vec<bool>,
@@ -88,9 +93,9 @@ impl PartialIDer {
 pub struct Palette {
     default_colors : Vec<Color>,
     partials : PartialIDer,
-    // TODO: have a way to map names → colors
     
-    assigned : HashMap<ObjectID, Color>,
+    /// Mapping of names -> colors, when found. names not found will be given default colors.
+    pub assigned : HashMap<ObjectID, Color>,
     next_color : usize
 }
 
@@ -156,5 +161,125 @@ impl Default for Palette {
             assigned : HashMap::new(),
             next_color : 0
         }
+    }
+}
+
+#[derive(Serialize, RustcEncodable, Copy, Clone)]
+struct AssignmentRef<'a> {
+    names : &'a ObjectID,
+    color : &'a Color
+}
+
+fn to_assignments<'a>(assigned : &'a HashMap<ObjectID, Color>) -> Vec<AssignmentRef<'a>> {
+    assigned.into_iter().map(|(k, v)| {
+        AssignmentRef{
+            names : k,
+            color : v
+        }
+    }).collect()
+}
+
+/// A reference to a palette, with minimal data, for serialization purposes
+#[derive(Serialize, RustcEncodable, Clone)]
+pub struct PaletteRef<'a> {
+    defaults : &'a Vec<Color>,
+    partials : &'a PartialIDer,
+    assigned : Vec<AssignmentRef<'a>>
+}
+
+impl<'a> From<&'a Palette> for PaletteRef<'a> {
+    fn from(palette: &'a Palette) -> Self {
+        PaletteRef {
+            defaults : &palette.default_colors,
+            partials : &palette.partials,
+            assigned : to_assignments(&palette.assigned),
+        }
+    }
+}
+
+#[derive(Deserialize, RustcDecodable, Clone)]
+struct Assignment {
+    names : ObjectID,
+    color : Color
+}
+
+fn from_assignments(assigned : Vec<Assignment>) -> HashMap<ObjectID, Color> {
+    assigned.into_iter().map(|a| {
+        (a.names, a.color)
+    }).collect()
+}
+
+
+/// A reference to a palette, with minimal data
+#[derive(Deserialize, RustcDecodable, Clone)]
+pub struct PaletteBasic {
+    defaults : Vec<Color>,
+    partials : PartialIDer,
+    assigned : Option<Vec<Assignment>>,
+    next_color : Option<usize>
+}
+
+impl From<PaletteBasic> for Palette {
+    fn from(p : PaletteBasic) -> Self {
+        Palette {
+            default_colors : p.defaults,
+            partials : p.partials,
+            assigned : p.assigned.map(from_assignments).unwrap_or_default(),
+            next_color : p.next_color.unwrap_or(0)
+        }
+    }
+}
+
+impl serde::Serialize for Color {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
+        let &Color(r,g,b) = self;
+        serde::Serialize::serialize(&(r,g,b), serializer)
+    }
+}
+
+impl serde::Deserialize for Color {
+    fn deserialize<D : serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
+        let (r,g,b) = try!(serde::Deserialize::deserialize(deserializer));
+        Ok(Color(r,g,b))
+    }
+}
+
+impl rustc_serialize::Encodable for Color {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        let &Color(r,g,b) = self;
+        rustc_serialize::Encodable::encode(&(r,g,b), s)
+    }
+}
+
+impl rustc_serialize::Decodable for Color {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        let (r,g,b) = try!(rustc_serialize::Decodable::decode(d));
+        Ok(Color(r,g,b))
+    }
+}
+
+impl serde::Serialize for Palette {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
+        PaletteRef::from(self).serialize(serializer)
+    }
+}
+
+impl serde::Deserialize for Palette {
+    fn deserialize<D : serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error>  {
+        let p = try!(PaletteBasic::deserialize(deserializer));
+        Ok(Palette::from(p))
+    }
+}
+
+impl rustc_serialize::Encodable for Palette {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        PaletteRef::from(self).encode(s)
+    }
+}
+
+impl rustc_serialize::Decodable for Palette {
+    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        let p = try!(PaletteBasic::decode(d));
+        Ok(Palette::from(p))
     }
 }

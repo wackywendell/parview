@@ -15,6 +15,7 @@
 
 extern crate rand;
 extern crate serde;
+extern crate rustc_serialize; // for docopt, toml
 
 extern crate nalgebra as na;
 extern crate kiss3d;
@@ -28,7 +29,7 @@ pub use serde::{Serialize, Deserialize};
 pub mod objects;
 pub use objects::{ObjectTracker,ObjectID,Sphere};
 pub mod palette;
-pub use palette::Palette;
+pub use palette::{Color,Palette};
 
 /// Inconsolata font
 pub fn inconsolata(size: i32) -> std::rc::Rc<kiss3d::text::Font> {

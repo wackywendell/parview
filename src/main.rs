@@ -15,8 +15,9 @@
 extern crate docopt;
 
 extern crate rand;
-extern crate rustc_serialize; // for docopt
-extern crate serde;
+extern crate rustc_serialize; // for docopt, toml
+extern crate serde; // for json
+extern crate toml;
 extern crate flate2;
 
 extern crate nalgebra as na;
@@ -30,6 +31,7 @@ use rand::random;
 use std::fs::File;
 use std::path::Path;
 use std::io;
+use std::io::{Read,Write};
 use std::f32::consts::PI;
 
 use kiss3d::window::Window;
@@ -155,7 +157,8 @@ struct Args {
     flag_distance : f32,
     flag_width : u32,
     flag_height : Option<u32>,
-    arg_file : Option<String>
+    flag_p : Option<String>,
+    arg_file : Option<String>,
 }
 
 // Write the Docopt usage string.
@@ -163,14 +166,15 @@ static USAGE: &'static str = "
 Usage: parview [options] [--] [<file>]
 
 Options:
-    -h, --help        Help and usage
-    -g, --generate    Generate test_frames.json
-    --pitch ANGLE     Set initial pitch (degrees) [default: 90]
-    --yaw ANGLE       Set initial yaw (degrees) [default: 0]
-    --fov ANGLE       Set camera field-of-view angle (degrees) [default: 45]
-    --width PIXELS    Set window width (pixels) [default: 600]
-    --height PIXELS   Set window height, if different from width (pixels)
-    --distance D      Set distance from box (L) [default: 2]
+    -h, --help          Help and usage
+    -g, --generate      Generate test_frames.json
+    -p, --palette FILE  Use palette file (toml file)
+    --pitch ANGLE       Set initial pitch (degrees) [default: 90]
+    --yaw ANGLE         Set initial yaw (degrees) [default: 0]
+    --fov ANGLE         Set camera field-of-view angle (degrees) [default: 45]
+    --width PIXELS      Set window width (pixels) [default: 600]
+    --height PIXELS     Set window height, if different from width (pixels)
+    --distance D        Set distance from box (L) [default: 2]
 
 Arguments:
     <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
@@ -191,6 +195,26 @@ pub fn main() {
     
     if args.flag_g {
         generate_frame(path).unwrap();
+        let _ = args.flag_p.as_ref().map(|fname| {
+            let path : &Path = Path::new(fname);
+            let mut file : File = File::create(path).unwrap();
+            println!("Default...");
+            let mut default_palette = parview::Palette::default();
+            println!("insert...");
+            let _ = default_palette.assigned.insert(
+                parview::ObjectID(vec!("A".into())), 
+                parview::Color(255, 0, 0),
+            );
+            println!("insert 2...");
+            let _ = default_palette.assigned.insert(
+                parview::ObjectID(vec!("B".into())), 
+                parview::Color(0, 255, 0),
+            );
+            println!("string...");
+            let s : String = toml::encode_str(&default_palette);
+            println!("Write!");
+            write!(file, "{}", s).unwrap();
+        });
     }
     
     let frames = open_file(path).unwrap();
@@ -213,7 +237,13 @@ pub fn main() {
     window.set_framerate_limit(Some(20));
 
     let mut nodes = parview::ObjectTracker::new(&mut window);
-    let mut palette = parview::Palette::default();
+    let mut palette : parview::Palette = args.flag_p.map(|fname| {
+        let path : &Path = Path::new(&fname[..]);
+        let mut file : File = File::open(path).unwrap();
+        let mut s = String::new();
+        let _ = file.read_to_string(&mut s).unwrap();
+        toml::decode_str(&s[..]).unwrap()
+    }).unwrap_or_default();
     
     let mut lastframe : isize = -1;
     let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
