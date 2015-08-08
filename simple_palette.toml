@@ -1,0 +1,25 @@
+# green, purple, orange, red, blue, brown
+defaults = [
+    [77, 175, 74],   # green
+    [152, 78, 163],  # purple
+    [255, 127, 0],   # orange
+    [228, 26, 28],   # red
+    [55, 126, 184],  # blue
+    [166, 86, 40],   # brown
+    [247, 129, 191], # pink
+    [153, 153, 153], # gray
+    [255, 255, 51],  # yellow
+    [255, 255, 255], # white
+    [0, 0, 0]        # black
+]
+
+[[assigned]]
+color = [77, 175, 74]
+names = ["1.0"]
+
+[[assigned]]
+color = [152, 78, 163]
+names = ["1.4"]
+
+[partials]
+bools = [true, false]
