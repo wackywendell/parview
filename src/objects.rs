@@ -132,12 +132,12 @@ impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
 
 #[derive(Deserialize, Serialize, Clone)]
 /// A single frame, containing spheres
-/// format is (location, radius, Option(color triple))
+/// format is (location, diameter, Option(color triple))
 pub struct Sphere {
     /// location of the sphere
     pub loc : (f32,f32,f32),
-    /// Radius
-    pub radius : f32,
+    /// Diameter
+    pub diameter : f32,
     /// Color. if none, one will be assigned
     pub names : ObjectID,
 }
@@ -154,17 +154,16 @@ impl Object for Sphere {
     fn id(&self) -> &ObjectID {&self.names}
     
     fn new_node(&self, parent : &mut SceneNode) -> SceneNode {
-        let mut node = parent.add_sphere(self.radius);
+        let mut node = parent.add_sphere(self.diameter);
         node.set_local_translation(self.x());
-        node.set_local_scale(self.radius, self.radius, self.radius);
         
         node
     }
     
     fn update(&mut self, other: &Self, node: &mut SceneNode){
-        if self.radius != other.radius {
-            self.radius = other.radius;
-            node.set_local_scale(self.radius, self.radius, self.radius);
+        if self.diameter != other.diameter {
+            self.diameter = other.diameter;
+            node.set_local_scale(self.diameter, self.diameter, self.diameter);
         }
         
         if self.loc != other.loc {

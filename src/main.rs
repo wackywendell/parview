@@ -48,7 +48,7 @@ pub fn generate_frame(path : &Path) -> io::Result<()> {
             format!("{}", n / 4 + 1),
             format!("{}", n % 4 + 1)
         ]);
-        Sphere{loc:(loc.x, loc.y, loc.z), radius:s*0.2, names:names}
+        Sphere{loc:(loc.x, loc.y, loc.z), diameter:s*0.2, names:names}
     }).collect();
 
     let f = Frame {
@@ -61,7 +61,7 @@ pub fn generate_frame(path : &Path) -> io::Result<()> {
     for i in (0usize..40usize){
         let mut f2 = Frame {
             spheres : f.spheres.iter().enumerate().map(|(n, ref s)| {
-                    let mut newr = s.radius;
+                    let mut newr = s.diameter;
                     if n == 0 {
                         newr = random::<f32>() * 0.2f32;
                     }
@@ -70,7 +70,7 @@ pub fn generate_frame(path : &Path) -> io::Result<()> {
                         (rand_vec() * 0.1f32);
                     Sphere {
                         loc: (x, y, z), 
-                        radius: newr,
+                        diameter: newr,
                         names: s.names.clone()
                     }
                 }).collect(),
@@ -246,7 +246,9 @@ pub fn main() {
     }).unwrap_or_default();
     
     let mut lastframe : isize = -1;
-    let mut timer = parview::Timer::new(vec![1./16., 1./8., 1./4., 1./2.,1., 2., 5., 10.], Some(frames.len()));
+    let mut timer = parview::Timer::new(vec![0.1, 0.2, 0.5, 1., 2., 5., 10.], Some(frames.len()));
+    // TODO: add config
+    timer.loop_pause = Some(5.);
     let mut text = None;
 
     //TODO: Include this font as an asset

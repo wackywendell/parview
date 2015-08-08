@@ -230,6 +230,8 @@ impl From<PaletteBasic> for Palette {
     }
 }
 
+//TODO: add test for round-trip through toml and json
+
 impl serde::Serialize for Color {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
         let &Color(r,g,b) = self;

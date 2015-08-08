@@ -54,16 +54,12 @@ pub fn rand_vec() -> na::Vec3<f32> {
 /// Timer
 pub struct Timer {
     dts : Vec<f32>, // possible dt values
-    /// DEBUG
-    pub dti : isize, // which of dts we're talking about. 0 is stop, 1 => dts[0], -1 => -dts[0]
+    dti : isize, // which of dts we're talking about. 0 is stop, 1 => dts[0], -1 => -dts[0]
     len : Option<usize>, // length of what we're iterating over
-    /// DEBUG
-    pub t : f32, // current index
-    //~ loop_around : enum {
-        //~ Loop,
-        //~ Stop,
-        //~ Reverse
-    //~ }
+    /// Current index, as float; keeps track of partials
+    pub t : f32,
+    /// Time to pause before re-looping. None means "don't loop".
+    pub loop_pause : Option<f32>,
 }
 
 impl Timer {
@@ -80,6 +76,7 @@ impl Timer {
             dti: 1,
             len: len,
             t : 0.0,
+            loop_pause : None,
         }
     }
 
@@ -113,7 +110,7 @@ impl Timer {
         match self.dti {
             0 => 0.,
             i if i > 0 => self.dts[(i-1) as usize],
-            i => -self.dts[(1-i) as usize]
+            i => -self.dts[(-1-i) as usize]
         }
     }
 
@@ -122,10 +119,73 @@ impl Timer {
     pub fn incr(&mut self) -> usize {
         self.t += self.get_dt();
 
-        let ix = self.t as usize;
-        match self.len {
-            None => {ix},
-            Some(l) => ix % l
+        match (self.len, self.loop_pause) {
+            (None, _) if self.t < 0. => {
+                    self.t = 0.;
+                    0
+                },
+            (None, _) => self.t as usize,
+            (_, None) if self.t < 0. => {
+                    // fixed length, but no loop, but t is negative
+                    self.t = 0.;
+                    0
+                },
+            (Some(len), None) => {
+                // We have a fixed length, but we don't loop.
+                let ix = self.t as usize;
+                if ix >= len { len - 1 } else { ix }
+            }
+            (Some(len), Some(pause)) => {
+                // We have a fixed length, but we don't loop.
+                let loop_len = (len as f32) + pause;
+                let ix = (self.t % loop_len) as usize;
+                if ix >= len { len - 1 } else { ix }
+            }
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    
+    #[test]
+    fn timer_dts() {
+        let mut t = ::Timer::new(vec!(1.,2.,4.), None);
+        assert_eq!(t.get_dt(), 1.);
+        assert_eq!(t.incr(), 1);
+        t.faster();
+        assert_eq!(t.get_dt(), 2.);
+        assert_eq!(t.incr(), 3);
+        t.faster();
+        assert_eq!(t.get_dt(), 4.);
+        assert_eq!(t.incr(), 7);
+        t.faster();
+        assert_eq!(t.get_dt(), 4.);
+        assert_eq!(t.incr(), 11);
+        t.switch_direction();
+        assert_eq!(t.get_dt(), -4.);
+        assert_eq!(t.incr(), 7);
+        t.faster();
+        assert_eq!(t.get_dt(), -4.);
+        assert_eq!(t.incr(), 3);
+        t.switch_direction();
+        assert_eq!(t.get_dt(), 4.);
+        assert_eq!(t.incr(), 7);
+        t.switch_direction();
+        assert_eq!(t.get_dt(), -4.);
+        assert_eq!(t.incr(), 3);
+        t.slower();
+        assert_eq!(t.get_dt(), -2.);
+        assert_eq!(t.incr(), 1);
+        t.slower();
+        assert_eq!(t.get_dt(), -1.);
+        assert_eq!(t.incr(), 0);
+        t.slower();
+        assert_eq!(t.get_dt(), 0.);
+        assert_eq!(t.incr(), 0);
+        t.slower();
+        assert_eq!(t.get_dt(), 0.);
+        assert_eq!(t.incr(), 0);
+    }
+}
+        
