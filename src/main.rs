@@ -4,6 +4,8 @@
 // #![feature(plugin)]
 // #![plugin(docopt_macros)]
 
+#![feature(concat_idents)]
+
 #![deny(non_camel_case_types)]
 #![deny(unused_parens)]
 #![deny(non_upper_case_globals)]
@@ -146,19 +148,80 @@ fn open_file(path : &Path) -> Result<Vec<Frame>, serde::json::error::Error> {
     coded_opt
 }
 
-// docopt!
+macro_rules! make_docs {
+        ($($name:ident, $flagname:ident : $typ:ty),*) => {
+        
+        /// Structure for converting command-line arguments into a useful form.
+        /// Can be converted to Config for use with parview.
+        #[derive(RustcDecodable, Debug)]
+        pub struct Args {
+            $(
+                /// See usage string for field details.
+                pub $flagname : $typ,
+            )*
+        }
+        
+        /// Structure for holding configuration options from command-line or config file.
+        /// Can be converted from Args.
+        #[derive(Debug)]
+        pub struct Config {
+            $(
+                /// See usage string for field details.
+                pub $name : $typ,
+            )*
+        }
+        
+        impl From<Args> for Config {
+            fn from(args : Args) -> Config {
+                Config {
+                    $(
+                        $name : args.$flagname,
+                    )*
+                }
+            }
+        }
+        
+        impl Config {
+            /// Convert Docopt usage to Config, using argv from an iterator
+            pub fn from_docopt<I, S>(usage : &str, argv : I) -> Result<Config, docopt::Error>
+                where I: Iterator<Item=S>, S: AsRef<str> {
+                    docopt::Docopt::new(usage)
+                                    .map(|d| d.argv(argv))
+                                    .and_then(|d| d.decode())
+                                    .map(|args : Args| Config::from(args))
+            }
+            
+            /// Convert Docopt usage to Config, using command-line argv
+            pub fn from_usage(usage : &str) -> Result<Config, docopt::Error> {
+                docopt::Docopt::new(usage)
+                                .and_then(|d| d.decode())
+                                .map(|args : Args| Config::from(args))
+            }
+        }
+                
+        impl Default for Config {
+            fn default() -> Config {
+                let argv : &[&str] = &[];
+                Config::from_docopt(USAGE, argv.iter()).unwrap()
+            }
+        }
+    }
+}
 
-#[derive(RustcDecodable, Debug)]
-struct Args {
-    flag_g : bool,
-    flag_pitch : f32,
-    flag_yaw : f32,
-    flag_fov : f32,
-    flag_distance : f32,
-    flag_width : u32,
-    flag_height : Option<u32>,
-    flag_p : Option<String>,
-    arg_file : Option<String>,
+// Generate Args, and Config.
+// Args is the structure for Docopt, and Config is the corresponding configuration we actually use.
+// Note that Config::from(args : Args) exists.
+make_docs!{
+    generate, flag_g : bool,
+    pitch, flag_pitch : f32,
+    yaw, flag_yaw : f32,
+    fov, flag_fov : f32,
+    distance, flag_distance : f32,
+    width, flag_width : u32,
+    height, flag_height : Option<u32>,
+    palette, flag_p : Option<String>,
+    pauseloop, flag_pauseloop : Option<f32>,
+    file, arg_file : Option<String>
 }
 
 // Write the Docopt usage string.
@@ -166,36 +229,36 @@ static USAGE: &'static str = "
 Usage: parview [options] [--] [<file>]
 
 Options:
-    -h, --help          Help and usage
-    -g, --generate      Generate test_frames.json
-    -p, --palette FILE  Use palette file (toml file)
-    --pitch ANGLE       Set initial pitch (degrees) [default: 90]
-    --yaw ANGLE         Set initial yaw (degrees) [default: 0]
-    --fov ANGLE         Set camera field-of-view angle (degrees) [default: 45]
-    --width PIXELS      Set window width (pixels) [default: 600]
-    --height PIXELS     Set window height, if different from width (pixels)
-    --distance D        Set distance from box (L) [default: 2]
+    -h, --help            Help and usage
+    -g, --generate        Generate test_frames.json
+    -p, --palette FILE    Use palette file (toml file)
+    --pitch ANGLE         Set initial pitch (degrees) [default: 90]
+    --yaw ANGLE           Set initial yaw (degrees) [default: 0]
+    --fov ANGLE           Set camera field-of-view angle (degrees) [default: 45]
+    --width PIXELS        Set window width (pixels) [default: 600]
+    --height PIXELS       Set window height, if different from width (pixels)
+    --distance D          Set distance from box (L) [default: 2]
+    --pauseloop SECONDS   When finished, pause for SECONDS, then loop. By default, does not loop.
 
 Arguments:
     <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
 ";
 /// Main entry point, now using test_frame.json
 pub fn main() {
-    let args: Args = docopt::Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
+    let config: Config = Config::from_usage(USAGE)
                             .unwrap_or_else(|e| e.exit());
     // with docopt! macro
     // let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     
-    let fname : String = match args.arg_file {
+    let fname : String = match config.file {
         Some(s) => s,
         None => std::str::FromStr::from_str("test_frame.json").unwrap()
     };
     let path : &Path = Path::new(&*fname);
     
-    if args.flag_g {
+    if config.generate {
         generate_frame(path).unwrap();
-        let _ = args.flag_p.as_ref().map(|fname| {
+        let _ = config.palette.as_ref().map(|fname| {
             let path : &Path = Path::new(fname);
             let mut file : File = File::create(path).unwrap();
             println!("Default...");
@@ -220,24 +283,24 @@ pub fn main() {
     let frames = open_file(path).unwrap();
     
     let title : String = format!("Parviewer: {}", path.to_string_lossy());
-    let width : u32 = args.flag_width;
-    let height : u32 = args.flag_height.unwrap_or(width);
+    let width : u32 = config.width;
+    let height : u32 = config.height.unwrap_or(width);
     let mut window = Window::new_with_size(&*title, width, height);
     let _ = draw_cube(&mut window);
 
-    let eye              = na::Pnt3::new(0.0f32, 0.0, args.flag_distance);
+    let eye              = na::Pnt3::new(0.0f32, 0.0, config.distance);
     let at               = na::orig();
-    let mut arc_ball     = kiss3d::camera::ArcBall::new_with_frustrum(args.flag_fov * PI / 180., 0.1, 1024.0, eye, at);
+    let mut arc_ball     = kiss3d::camera::ArcBall::new_with_frustrum(config.fov * PI / 180., 0.1, 1024.0, eye, at);
     
-    arc_ball.set_yaw(args.flag_yaw * PI / 180.);
-    arc_ball.set_pitch(args.flag_pitch * PI / 180.);
+    arc_ball.set_yaw(config.yaw * PI / 180.);
+    arc_ball.set_pitch(config.pitch * PI / 180.);
 
     //window.set_background_color(1.0, 1.0, 1.0);
     window.set_light(kiss3d::light::Light::StickToCamera);
     window.set_framerate_limit(Some(20));
 
     let mut nodes = parview::ObjectTracker::new(&mut window);
-    let mut palette : parview::Palette = args.flag_p.map(|fname| {
+    let mut palette : parview::Palette = config.palette.map(|fname| {
         let path : &Path = Path::new(&fname[..]);
         let mut file : File = File::open(path).unwrap();
         let mut s = String::new();
@@ -248,7 +311,7 @@ pub fn main() {
     let mut lastframe : isize = -1;
     let mut timer = parview::Timer::new(vec![0.1, 0.2, 0.5, 1., 2., 5., 10.], Some(frames.len()));
     // TODO: add config
-    timer.loop_pause = Some(5.);
+    timer.loop_pause = config.pauseloop;
     let mut text = None;
 
     //TODO: Include this font as an asset
