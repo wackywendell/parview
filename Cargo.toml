@@ -12,6 +12,7 @@ glfw = "*"
 flate2 = "*"
 serde = "*"
 serde_macros = "*"
+serde_json = "*"
 rustc-serialize = "*"
 toml = "*"
 

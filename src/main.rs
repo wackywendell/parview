@@ -18,7 +18,7 @@ extern crate docopt;
 
 extern crate rand;
 extern crate rustc_serialize; // for docopt, toml
-extern crate serde; // for json
+extern crate serde_json; // for json
 extern crate toml;
 extern crate flate2;
 
@@ -27,7 +27,6 @@ extern crate kiss3d;
 extern crate glfw;
 extern crate parview;
 
-use serde::{Error};
 use flate2::read::GzDecoder;
 use rand::random;
 use std::fs::File;
@@ -89,7 +88,7 @@ pub fn generate_frame(path : &Path) -> io::Result<()> {
 
     let mut file = File::create(&path).unwrap();
     
-    serde::json::ser::to_writer_pretty(&mut file, &framevec)
+    serde_json::ser::to_writer_pretty(&mut file, &framevec)
 }
 
 fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
@@ -121,7 +120,7 @@ fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
     cube
 }
 
-fn open_file(path : &Path) -> Result<Vec<Frame>, serde::json::error::Error> {
+fn open_file(path : &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
     let mut buf : io::BufReader<File> = io::BufReader::new(try!(File::open(path)));
     // let f = try!(File::open(path));
 
@@ -138,10 +137,10 @@ fn open_file(path : &Path) -> Result<Vec<Frame>, serde::json::error::Error> {
     let coded_opt = match ext {
         Some("gz") => {
             let mut gzbuf = try!(GzDecoder::new(buf));
-            serde::json::de::from_reader(&mut gzbuf)
+            serde_json::de::from_reader(&mut gzbuf)
         },
         _ => {
-            serde::json::de::from_reader(&mut buf)
+            serde_json::de::from_reader(&mut buf)
             }
     };
 
