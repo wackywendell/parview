@@ -6,6 +6,7 @@ authors = [ "wendell.smith@yale.edu" ]
 
 [dependencies]
 docopt = "*"
+docopt_macros = "*"
 nalgebra = "*"
 rand = "*"
 glfw = "*"

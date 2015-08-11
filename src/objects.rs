@@ -56,6 +56,15 @@ impl ObjectID{
     }
 }
 
+#[derive(Deserialize, Serialize, Clone)]
+/// A single frame, which is a series of spheres
+pub struct Frame {
+    /// the spheres
+    pub spheres : Vec<Sphere>,
+    /// Text to display
+    pub text : Option<String>
+}
+
 /// An object that will be drawable by Parview.
 ///
 /// This is the trait-based interface so that Parview can manage it.
@@ -71,9 +80,9 @@ pub trait Object : Clone {
 }
 
 /// Keeps track of what `Object` maps to what `SceneNode`, and handles updates
-pub struct ObjectTracker<'a, T : Object> {
+pub struct ObjectTracker<T : Object> {
     /// The set of objects
-    objects : HashMap<&'a ObjectID, (T, SceneNode)>,
+    objects : HashMap<ObjectID, (T, SceneNode)>,
     /// The scene to which to attach new objects
     parent : SceneNode
 }
@@ -86,9 +95,9 @@ pub struct ObjectTracker<'a> {
 }
 */
 
-impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
+impl<T : Object> ObjectTracker<T> {
     /// Create a new `ObjectTracker` associated with a given `Window`.
-    pub fn new(window: &mut Window) -> ObjectTracker<'a, T> {
+    pub fn new(window: &mut Window) -> ObjectTracker<T> {
         ObjectTracker{
             objects: HashMap::new(),
             parent: window.add_group()
@@ -97,12 +106,14 @@ impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
     
     /// The meat of `ObjectTracker`. Update old objects and the scene to match
     /// new objects
-    pub fn update<I : Iterator<Item=&'a T>>(&mut self, iter : I, palette : &mut Palette) {
-        let mut seen : HashSet<&ObjectID> = FromIterator::from_iter(self.objects.keys().map(|&k|{k}));
+    pub fn update<'a, I : Iterator<Item=&'a T>>(&'a mut self, iter : I, palette : &mut Palette) {
+        // TODO: this used to be &ObjectID, which is probably faster
+        let mut seen : HashSet<ObjectID> = FromIterator::from_iter(self.objects.keys()
+            .map(|ref k|{(*k).clone()}));
         
         for new_object in iter {
-            let name : &'a ObjectID = new_object.id();
-            match self.objects.entry(name) {
+            let name : & ObjectID = new_object.id();
+            match self.objects.entry(name.clone()) {
                 Entry::Occupied(mut entry) => {
                     let &mut (ref mut obj, ref mut node) = entry.get_mut();
                     obj.update(&new_object, node);
@@ -122,10 +133,10 @@ impl<'a, T : Object + 'a> ObjectTracker<'a, T> {
         }
         
         for k in seen {
-            let _ = self.objects.get_mut(k).map(|&mut (_, ref mut node)| {
+            let _ = self.objects.get_mut(&k).map(|&mut (_, ref mut node)| {
                 let _ = node.unlink();
             });
-            let _ = self.objects.remove(k);
+            let _ = self.objects.remove(&k);
         }
     }
 }
