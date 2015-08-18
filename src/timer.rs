@@ -112,6 +112,8 @@ impl Timer {
             (Some(len), Some(pause)) => {
                 // We have a fixed length, but we don't loop.
                 let loop_len = (len as f32) + pause;
+                if self.t < 0. {self.t += loop_len;}
+                else if self.t > loop_len {self.t -= loop_len;};
                 let ix = (self.t % loop_len) as usize;
                 if ix >= len { len - 1 } else { ix }
             }
