@@ -20,6 +20,7 @@ use objects::ObjectID;
 #[derive(Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone)]
 pub struct Color(pub u8,pub u8,pub u8);
 
+/// Default colors to use, when no others are specified.
 pub static DEFAULT_COLORS : [(u8, u8, u8); 11] = [
     ( 77, 175,  74), // Green
     (152,  78, 163), // Purple
