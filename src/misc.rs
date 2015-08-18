@@ -6,13 +6,17 @@ use kiss3d;
 use serde;
 use serde_json;
 use toml;
+use rustc_serialize;
 
-use rand::random;
-use kiss3d::window::Window;
+
 use std::fs::File;
 use std::path::Path;
 use std::io;
-use std::io::Write;
+use std::io::{Read,Write};
+use std::error::Error;
+use rustc_serialize::Decodable;
+use rand::random;
+use kiss3d::window::Window;
 use flate2::read::GzDecoder;
 
 use objects;
@@ -110,7 +114,7 @@ pub fn generate_frame(path : &Path) -> io::Result<Vec<objects::Frame>> {
 }
 
 /// Write a default palette, as an example to be used when creating a new one
-pub fn generate_palette(path : &Path) -> Result<palette::Palette, Box<std::error::Error>> {
+pub fn generate_palette(path : &Path) -> Result<palette::Palette, Box<Error>> {
     let mut file : File = try!(File::create(path));
     let mut default_palette = palette::Palette::default();
     let _ = default_palette.assigned.insert(
@@ -124,6 +128,28 @@ pub fn generate_palette(path : &Path) -> Result<palette::Palette, Box<std::error
     let s : String = toml::encode_str(&default_palette);
     try!(write!(file, "{}", s));
     Ok(default_palette)
+}
+
+/// Load from a file, using toml-rs and serialize
+pub fn load_toml<T: Decodable>(path : &Path) -> Result<T, Box<Error>> {
+    let mut file : File = try!(File::open(path));
+    let mut s = String::new();
+    let _ = try!(file.read_to_string(&mut s));
+    let mut parser = toml::Parser::new(s.as_ref());
+    
+    let parsed = parser.parse();
+    let values = match parsed {
+        Some(v) => v,
+        None => {
+            // We can unwrap here, becase parser.parse() == None means there were errors
+            let err : Box<Error> = parser.errors.pop().unwrap().into();
+            return Err(err)
+        }
+    };
+    let table : toml::Value = toml::Value::Table(values);
+    let mut decoder = toml::Decoder::new(table);
+    let p = try!(rustc_serialize::Decodable::decode(&mut decoder));
+    Ok(p)
 }
 
 /// Draw a cube in the current window. Cube will be a red skeleton.

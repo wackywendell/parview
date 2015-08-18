@@ -38,7 +38,9 @@ pub struct Config {
     /// How long to pause before looping. None indicates no looping.
     pub pauseloop : Option<f32>,
     /// framerate limit
-    pub fps : f32
+    pub fps : f32,
+    /// rotation
+    pub rotate : f32
 }
 
 /// Open a `json` or `json.gz` file, and deserialize it into a `Vec<Frame>`
@@ -67,6 +69,15 @@ pub fn open_file(path : &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
     };
 
     coded_opt
+}
+
+fn err_print(err : &std::error::Error) {
+    println!("Cause: {}", err.description());
+    println!("{}", err);
+    println!("{:?}", err);
+    if let Some(e) = err.cause() {
+        err_print(e);
+    }
 }
 
 /// The main entry point,maintaining a window, a Config, objects, etc.
@@ -196,6 +207,11 @@ impl Parviewer {
                 text = frame.text.clone();
                 self.nodes.update(frame.spheres.iter(), &mut self.palette);
                 lastframe = i as isize;
+            }
+            
+            if self.config.rotate.abs() > 1e-6 {
+                let new_yaw = self.camera.yaw() + PI*self.config.rotate / 180.0;
+                self.camera.set_yaw(new_yaw);
             }
             
             // TODO: add config

@@ -3,6 +3,7 @@
 */
 
 #![feature(plugin)]
+#![feature(custom_derive)]
 #![plugin(docopt_macros)]
 
 #![feature(concat_idents)]
@@ -30,49 +31,93 @@ Usage: parview [options] [--] [<file>]
 Options:
     -h, --help              Help and usage
     -g, --generate          Generate test_frames.json
-    -p, --palette FILE      Use palette file (toml file)
-    --pitch ANGLE           Set initial pitch (degrees) [default: 90]
-    --yaw ANGLE             Set initial yaw (degrees) [default: 0]
-    --fov ANGLE             Set camera field-of-view angle (degrees) [default: 45]
-    --width PIXELS          Set window width (pixels) [default: 600]
-    --height PIXELS         Set window height, if different from width (pixels)
-    --distance D            Set distance from box (L) [default: 2]
-    --pauseloop FRAMES      When finished, pause for FRAMES frames, then loop.
-                            By default, does not loop.
+    -p, --palette FILE      Use palette file (toml file), instead of default.
+    -c, --config FILE       Use config file (toml file), instead of default.
+    
 
 Arguments:
     <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
 ",
-flag_pitch : f32,
-flag_yaw : f32,
-flag_fov : f32,
-flag_distance : f32,
-flag_width : u32,
-flag_height : Option<u32>,
-flag_pauseloop : Option<f32>,
 flag_palette : Option<String>,
+flag_config : Option<String>,
 arg_file : Option<String>,
 );
 
-impl Args {
-    /// Create a Config instance from these Args
-    fn to_config(&self) -> Config {
-        Config {
-            pitch : self.flag_pitch,
-            yaw : self.flag_yaw,
-            fov : self.flag_fov,
-            width : self.flag_width,
-            height : self.flag_height.unwrap_or(self.flag_width),
-            distance : self.flag_distance,
-            pauseloop : self.flag_pauseloop,
-            fps : 24.
+/// Configuration to be loaded from the TOML file
+#[allow(unused_attributes)]
+#[derive(RustcDecodable,RustcEncodable)]
+#[derive(Serialize,Deserialize)]
+pub struct TomlConfig {
+    /// Set initial pitch (degrees) [default: 90]
+    pub pitch : f32,
+    ///Set initial yaw (degrees) [default: 0]
+    pub yaw : f32,
+    /// Set camera field-of-view angle (degrees) [default: 45]
+    pub fov : f32,
+    /// Set distance between camera and box (L) [default: 2]
+    pub distance : f32,
+    /// Set window width (pixels) [default: 600]
+    pub width : u32,
+    /// Set window height, if different from width (pixels)
+    pub height : Option<u32>,
+    /// When finished, pause for FRAMES frames, then loop. None does not loop. [default: None]
+    pub pauseloop : Option<f32>,
+    /// Continuous box rotation (angle / frame) [default: 0]
+    pub rotate : f32
+}
+
+impl Default for TomlConfig {
+    fn default() -> Self {
+        TomlConfig {
+            pitch : 90.,
+            yaw : 0.,
+            fov : 45.,
+            distance : 2.,
+            width : 800,
+            height : None,
+            pauseloop : None,
+            rotate : 0.0
         }
+    }
+}
+    
+/// Create a Config instance from these Args
+#[allow(unused_variables)]
+fn args_toml_to_config(args: &Args, toml_config: &TomlConfig) -> Config {
+    Config {
+        pitch : toml_config.pitch,
+        yaw : toml_config.yaw,
+        fov : toml_config.fov,
+        width : toml_config.width,
+        height : toml_config.height.unwrap_or(toml_config.width),
+        distance : toml_config.distance,
+        pauseloop : toml_config.pauseloop,
+        rotate : toml_config.rotate,
+        fps : 24.
+    }
+}
+
+fn err_print(err : &std::error::Error) {
+    println!("Description: {}", err.description());
+    println!("Debug version: {:?}", err);
+    
+    if let Some(e) = err.cause() {
+        println!("Cause.");
+        err_print(e);
     }
 }
 
 fn run() -> Result<(), Box<std::error::Error>> {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    let config : Config = args.to_config();
+    let toml_config : TomlConfig = match args.flag_config {
+        None => Default::default(),
+        Some(ref fname) => {
+            let path : &Path = Path::new(&fname[..]);
+            try!(misc::load_toml::<TomlConfig>(path))
+        }
+    };
+    
+    let config : Config = args_toml_to_config(&args, &toml_config);
     
     let fname : &str = match args.arg_file {
         Some(ref s) => s,
@@ -96,8 +141,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
             None => Default::default(),
             Some(fname) => {
                 let path : &Path = Path::new(&fname[..]);
-                let p : Palette = try!(Palette::load(path));
-                p
+                try!(misc::load_toml::<Palette>(path))
             }
         };
         (frames, palette)
@@ -111,5 +155,9 @@ fn run() -> Result<(), Box<std::error::Error>> {
 }
 
 fn main() {
-    run().unwrap();
+    if let Err(err) = run() {
+        println!("ERROR.");
+        
+        err_print(&*err);
+    }
 }

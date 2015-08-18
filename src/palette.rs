@@ -2,10 +2,7 @@
 
 use serde;
 use rustc_serialize; // needed for toml
-use toml;
 
-use std::fs::File;
-use std::path::Path;
 use std::error::Error;
 use std::io::Read;
 
@@ -156,28 +153,6 @@ impl Palette {
     /// Get a string like '_23____' for which parts of the ObjectID we are coloring with respect to
     pub fn partials_string(&self) -> String {
         self.partials.as_string()
-    }
-    
-    /// Load from a file, using toml-rs and serialize
-    pub fn load(path : &Path) -> Result<Self, Box<Error>> {
-        let mut file : File = try!(File::open(path));
-        let mut s = String::new();
-        let _ = try!(file.read_to_string(&mut s));
-        let mut parser = toml::Parser::new(s.as_ref());
-        
-        let parsed = parser.parse();
-        let values = match parsed {
-            Some(v) => v,
-            None => {
-                // We can unwrap here, becase parser.parse() == None means there were errors
-                let err : Box<Error> = parser.errors.pop().unwrap().into();
-                return Err(err)
-            }
-        };
-        let table : toml::Value = toml::Value::Table(values);
-        let mut decoder = toml::Decoder::new(table);
-        let p = try!(rustc_serialize::Decodable::decode(&mut decoder));
-        Ok(p)
     }
 }
 
