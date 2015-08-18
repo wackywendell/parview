@@ -38,7 +38,7 @@ pub struct Config {
     /// How long to pause before looping. None indicates no looping.
     pub pauseloop : Option<f32>,
     /// framerate limit
-    pub fps : f32,
+    pub framerate : f32,
     /// rotation
     pub rotate : f32
 }
@@ -115,18 +115,20 @@ impl Parviewer {
 
         //window.set_background_color(1.0, 1.0, 1.0);
         window.set_light(kiss3d::light::Light::StickToCamera);
-        window.set_framerate_limit(Some(config.fps as u64));
+        window.set_framerate_limit(Some(config.framerate as u64));
 
         let nodes = ObjectTracker::new(&mut window);
         
         // TODO: config?
-        let mut timer = Timer::new(vec![0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 
-                                                 1., 2., 5., 10., 20., 50., 100.],
-                                            Some(frames.len()));
+        let dts_first = vec![1., 2., 3., 4., 6., 8., 12., 16., 24., 32., 48., 64., 96., 128.];
+        let mut dts = dts_first.iter().rev().map(|n|{1./n}).collect::<Vec<f32>>();
+        dts.extend(dts_first);
+        dts.dedup();
+        
+        let mut timer = Timer::new(dts, Some(frames.len()));
         
         timer.loop_pause = config.pauseloop;
-        timer.fps = config.fps;
-        let _ = timer.at_least(0.499);
+        timer.fps = config.framerate;
 
         let fontsize = 48;
         let font = misc::inconsolata(fontsize);
@@ -226,11 +228,18 @@ impl Parviewer {
             // TODO: Figure out why the bottom is window.height() * 2.
             // Could be HiDPI
             let text_loc = na::Pnt2::new(0.0, self.window.height() * 2. - (self.font.height() as f32));
+            let dt = self.timer.get_dt();
+            let dt_text = if dt >= 0.6 || dt.abs() < 1e-6 {
+                format!("{}", dt)
+            } else {
+                format!("1/{}", 1./dt)
+            };
+            
             self.window.draw_text(
                 &*format!(
-                    "t:{:6.2}, dt:{:8.2}, coloring: {}", 
+                    "t:{:6.2}, dt:{}, coloring: {}", 
                     self.timer.get_time(),
-                    self.timer.get_dt(),
+                    dt_text,
                     self.palette.partials_string()
                 ),
                 &text_loc, &self.font, &text_color

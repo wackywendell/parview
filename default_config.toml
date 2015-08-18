@@ -14,3 +14,7 @@ width = 600
 # pauseloop = 12
 # Continuous box rotation (angle / frame)
 rotate = 0.0
+# sets maximum framerate of drawing, independent of actual frames.
+framerate = 24.0
+# Rate of drawing frames.
+fps = 2.0

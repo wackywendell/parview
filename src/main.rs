@@ -63,7 +63,11 @@ pub struct TomlConfig {
     /// When finished, pause for FRAMES frames, then loop. None does not loop. [default: None]
     pub pauseloop : Option<f32>,
     /// Continuous box rotation (angle / frame) [default: 0]
-    pub rotate : f32
+    pub rotate : f32,
+    /// Framerate: sets maximum framerate of drawing, independent of actual frames. [default: 24]
+    pub framerate : f32,
+    /// Rate of drawing frames. [default: 2.0]
+    pub fps : f32
 }
 
 impl Default for TomlConfig {
@@ -76,7 +80,9 @@ impl Default for TomlConfig {
             width : 800,
             height : None,
             pauseloop : None,
-            rotate : 0.0
+            rotate : 0.0,
+            fps : 2.0,
+            framerate : 24.0
         }
     }
 }
@@ -93,7 +99,7 @@ fn args_toml_to_config(args: &Args, toml_config: &TomlConfig) -> Config {
         distance : toml_config.distance,
         pauseloop : toml_config.pauseloop,
         rotate : toml_config.rotate,
-        fps : 24.
+        framerate : toml_config.framerate
     }
 }
 
@@ -150,6 +156,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
     // println!("config: {:?}", config);
     
     let mut viewer = try!(Parviewer::new(frames, palette, config));
+    let _ = viewer.timer.at_least(toml_config.fps);
     viewer.run();
     Ok(())
 }
