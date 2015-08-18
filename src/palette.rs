@@ -128,6 +128,7 @@ impl Palette {
     
     /// Toggle whether or not to use a certain partial value
     pub fn toggle_partial(&mut self, n : usize){
+        if n > self.partials.bools.len() {return;};
         self.partials.bools[n] = !self.partials.bools[n];
         self.next_color = 0;
     }
