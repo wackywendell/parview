@@ -71,15 +71,6 @@ pub fn open_file(path : &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
     coded_opt
 }
 
-fn err_print(err : &std::error::Error) {
-    println!("Cause: {}", err.description());
-    println!("{}", err);
-    println!("{:?}", err);
-    if let Some(e) = err.cause() {
-        err_print(e);
-    }
-}
-
 /// The main entry point,maintaining a window, a Config, objects, etc.
 pub struct Parviewer {
     config : Config,
