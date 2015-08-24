@@ -81,7 +81,7 @@ name = "enum_primitive"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -191,7 +191,7 @@ dependencies = [
  "enum_primitive 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gif 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -216,7 +216,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "kiss3d"
 version = "0.1.2"
-source = "git+https://github.com/sebcrozet/kiss3d#e2ba0b2eab39255c36d7808e6a477d4b64eacbbe"
+source = "git+https://github.com/sebcrozet/kiss3d#61c92463850472579ff07d1b22562fb6540f62bd"
 dependencies = [
  "freetype-rs 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gl 0.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -225,7 +225,7 @@ dependencies = [
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncollide_procedural 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -279,7 +279,7 @@ name = "nalgebra"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -290,7 +290,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "nalgebra 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -303,7 +303,7 @@ dependencies = [
  "nalgebra 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncollide_math 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncollide_utils 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -314,14 +314,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "nalgebra 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "ncollide_math 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "num"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "rand 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -394,7 +394,7 @@ name = "serde"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -412,7 +412,7 @@ name = "serde_json"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "num 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
