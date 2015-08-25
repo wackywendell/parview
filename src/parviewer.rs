@@ -182,7 +182,10 @@ impl Parviewer {
                     // Default to inhibiting, although this can be overridden
                     let mut inhibit = true;
                     match key {
-                        Key::Q => {return;},
+                        Key::Q => {
+                            self.window.close();
+                            return;
+                        },
                         Key::Comma => {self.timer.slower();},
                         Key::Period => {self.timer.faster();},
                         Key::F => {self.timer.switch_direction();},
