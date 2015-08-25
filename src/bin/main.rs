@@ -14,6 +14,8 @@
 #![deny(unused_qualifications)]
 #![deny(missing_docs)]
 #![deny(unused_results)]
+// Don't warn about dead code in this module when testing, its annoying.
+#![cfg_attr(test, allow(dead_code))]
 
 extern crate rustc_serialize;
 extern crate docopt;
