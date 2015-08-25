@@ -24,7 +24,7 @@ extern crate parview;
 
 use std::path::Path;
 
-use parview::{misc,Palette,Config,Frame,Parviewer};
+use parview::{misc,Palette,Config,TomlConfig,Frame,Parviewer};
 
 // Write the Docopt usage string.
 docopt!(Args derive Debug, "
@@ -45,76 +45,6 @@ flag_config : Option<String>,
 arg_file : Option<String>,
 );
 
-/// Configuration to be loaded from the TOML file
-#[allow(unused_attributes)]
-#[derive(RustcDecodable,RustcEncodable)]
-#[derive(Serialize,Deserialize)]
-pub struct TomlConfig {
-    /// Set initial pitch (degrees) [default: 90]
-    pub pitch : f32,
-    ///Set initial yaw (degrees) [default: 0]
-    pub yaw : f32,
-    /// Set camera field-of-view angle (degrees) [default: 45]
-    pub fov : f32,
-    /// Set distance between camera and box (L) [default: 2]
-    pub distance : f32,
-    /// Set window width (pixels) [default: 600]
-    pub width : u32,
-    /// Set window height, if different from width (pixels)
-    pub height : Option<u32>,
-    /// When finished, pause for FRAMES frames, then loop. None does not loop. [default: None]
-    pub pauseloop : Option<f32>,
-    /// Continuous box rotation (angle / frame) [default: 0]
-    pub rotate : f32,
-    /// Framerate: sets maximum framerate of drawing, independent of actual frames. [default: 24]
-    pub framerate : f32,
-    /// Rate of drawing frames. [default: 2.0]
-    pub fps : f32
-}
-
-impl Default for TomlConfig {
-    fn default() -> Self {
-        TomlConfig {
-            pitch : 90.,
-            yaw : 0.,
-            fov : 45.,
-            distance : 2.,
-            width : 800,
-            height : None,
-            pauseloop : None,
-            rotate : 0.0,
-            fps : 2.0,
-            framerate : 24.0
-        }
-    }
-}
-    
-/// Create a Config instance from these Args
-#[allow(unused_variables)]
-fn args_toml_to_config(args: &Args, toml_config: &TomlConfig) -> Config {
-    Config {
-        pitch : toml_config.pitch,
-        yaw : toml_config.yaw,
-        fov : toml_config.fov,
-        width : toml_config.width,
-        height : toml_config.height.unwrap_or(toml_config.width),
-        distance : toml_config.distance,
-        pauseloop : toml_config.pauseloop,
-        rotate : toml_config.rotate,
-        framerate : toml_config.framerate
-    }
-}
-
-fn err_print(err : &std::error::Error) {
-    println!("Description: {}", err.description());
-    println!("Debug version: {:?}", err);
-    
-    if let Some(e) = err.cause() {
-        println!("Cause.");
-        err_print(e);
-    }
-}
-
 fn run() -> Result<(), Box<std::error::Error>> {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     let toml_config : TomlConfig = match args.flag_config {
@@ -125,7 +55,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
         }
     };
     
-    let config : Config = args_toml_to_config(&args, &toml_config);
+    let config : Config = toml_config.to_parviewer_config();
     
     let fname : &str = match args.arg_file {
         Some(ref s) => s,
@@ -167,6 +97,6 @@ fn main() {
     if let Err(err) = run() {
         println!("ERROR.");
         
-        err_print(&*err);
+        misc::err_print(&*err);
     }
 }

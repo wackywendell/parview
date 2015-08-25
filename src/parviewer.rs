@@ -13,12 +13,12 @@ use glfw::{WindowEvent,Key};
 
 use std::path::Path;
 use std::fs::File;
+use std::f32::consts::PI;
 
 use timer::Timer;
 use misc;
 use palette::Palette;
 use objects::{Sphere,Frame,ObjectTracker};
-use std::f32::consts::PI;
 
 /// The configuration options for a Parviewer instance.
 #[derive(Debug, RustcDecodable, RustcEncodable, Serialize, Deserialize)]

@@ -35,8 +35,10 @@ pub mod palette;
 pub mod misc;
 pub mod timer;
 pub mod parviewer;
+pub mod config;
 
 pub use objects::{ObjectTracker,ObjectID,Sphere,Frame};
 pub use palette::{Color,Palette};
 pub use timer::Timer;
 pub use parviewer::{Config, Parviewer};
+pub use config::TomlConfig;

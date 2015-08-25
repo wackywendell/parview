@@ -182,3 +182,14 @@ pub fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
 
     cube
 }
+
+/// Turn an error into a print message.
+pub fn err_print(err : &Error) {
+    println!("Description: {}", err.description());
+    println!("Debug version: {:?}", err);
+    
+    if let Some(e) = err.cause() {
+        println!("Cause.");
+        err_print(e);
+    }
+}
