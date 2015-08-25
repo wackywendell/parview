@@ -19,6 +19,3 @@ toml = "*"
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"
-
-[[bin]]
-name = "parviewer"
