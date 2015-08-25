@@ -90,18 +90,36 @@ impl Timer {
     }
 
     /// Increment the timer, and return current index
-    pub fn incr(&mut self) -> usize {
+    pub fn incr(&mut self) {
         self.t += self.get_dt() / self.fps;
-
+        
         match (self.len, self.loop_pause) {
             (None, _) if self.t < 0. => {
                     self.t = 0.;
+                },
+            (_, None) if self.t < 0. => {
+                    // fixed length, but no loop, but t is negative
+                    self.t = 0.;
+                },
+            (Some(len), Some(pause)) => {
+                // We have a fixed length, but we loop after a pause.
+                let loop_len = (len as f32) + pause;
+                if self.t < 0. {self.t += loop_len;}
+                else if self.t > loop_len {self.t -= loop_len;};
+            },
+            _ => {}
+        }
+    }
+    
+    /// Get the current index into the array
+    pub fn get_index(&self) -> usize {
+        match (self.len, self.loop_pause) {
+            (None, _) if self.t < 0. => {
                     0
                 },
             (None, _) => self.t as usize,
             (_, None) if self.t < 0. => {
                     // fixed length, but no loop, but t is negative
-                    self.t = 0.;
                     0
                 },
             (Some(len), None) => {
@@ -112,8 +130,6 @@ impl Timer {
             (Some(len), Some(pause)) => {
                 // We have a fixed length, but we don't loop.
                 let loop_len = (len as f32) + pause;
-                if self.t < 0. {self.t += loop_len;}
-                else if self.t > loop_len {self.t -= loop_len;};
                 let ix = (self.t % loop_len) as usize;
                 if ix >= len { len - 1 } else { ix }
             }
@@ -128,40 +144,52 @@ mod test {
     fn timer_dts() {
         let mut t = ::Timer::new(vec!(1.,2.,4.), None);
         assert_eq!(t.get_dt(), 1.);
-        assert_eq!(t.incr(), 1);
+        t.incr();
+        assert_eq!(t.get_index(), 1);
         t.faster();
         assert_eq!(t.get_dt(), 2.);
-        assert_eq!(t.incr(), 3);
+        t.incr();
+        assert_eq!(t.get_index(), 3);
         t.faster();
         assert_eq!(t.get_dt(), 4.);
-        assert_eq!(t.incr(), 7);
+        t.incr();
+        assert_eq!(t.get_index(), 7);
         t.faster();
         assert_eq!(t.get_dt(), 4.);
-        assert_eq!(t.incr(), 11);
+        t.incr();
+        assert_eq!(t.get_index(), 11);
         t.switch_direction();
         assert_eq!(t.get_dt(), -4.);
-        assert_eq!(t.incr(), 7);
+        t.incr();
+        assert_eq!(t.get_index(), 7);
         t.faster();
         assert_eq!(t.get_dt(), -4.);
-        assert_eq!(t.incr(), 3);
+        t.incr();
+        assert_eq!(t.get_index(), 3);
         t.switch_direction();
         assert_eq!(t.get_dt(), 4.);
-        assert_eq!(t.incr(), 7);
+        t.incr();
+        assert_eq!(t.get_index(), 7);
         t.switch_direction();
         assert_eq!(t.get_dt(), -4.);
-        assert_eq!(t.incr(), 3);
+        t.incr();
+        assert_eq!(t.get_index(), 3);
         t.slower();
         assert_eq!(t.get_dt(), -2.);
-        assert_eq!(t.incr(), 1);
+        t.incr();
+        assert_eq!(t.get_index(), 1);
         t.slower();
         assert_eq!(t.get_dt(), -1.);
-        assert_eq!(t.incr(), 0);
+        t.incr();
+        assert_eq!(t.get_index(), 0);
         t.slower();
         assert_eq!(t.get_dt(), 0.);
-        assert_eq!(t.incr(), 0);
+        t.incr();
+        assert_eq!(t.get_index(), 0);
         t.slower();
         assert_eq!(t.get_dt(), 0.);
-        assert_eq!(t.incr(), 0);
+        t.incr();
+        assert_eq!(t.get_index(), 0);
     }
     
     #[test]
@@ -172,11 +200,16 @@ mod test {
         t.faster();
         t.faster();
         assert_eq!(t.get_dt(), 4.);
-        assert_eq!(t.incr(), 2); // t = 2.
-        assert_eq!(t.incr(), 4); // t = 4.
-        assert_eq!(t.incr(), 4); // t = 6.
-        assert_eq!(t.incr(), 4); // t = 8.
-        assert_eq!(t.incr(), 0); // t = 10.
+        t.incr();
+        assert_eq!(t.get_index(), 2); // t = 2.
+        t.incr();
+        assert_eq!(t.get_index(), 4); // t = 4.
+        t.incr();
+        assert_eq!(t.get_index(), 4); // t = 6.
+        t.incr();
+        assert_eq!(t.get_index(), 4); // t = 8.
+        t.incr();
+        assert_eq!(t.get_index(), 0); // t = 10.
     }
 }
         

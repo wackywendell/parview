@@ -17,7 +17,7 @@ use std::f32::consts::PI;
 
 use timer::Timer;
 use misc;
-use palette::Palette;
+use palette::{Color,Palette};
 use objects::{Sphere,Frame,ObjectTracker};
 
 /// The configuration options for a Parviewer instance.
@@ -39,8 +39,6 @@ pub struct Config {
     pub pauseloop : Option<f32>,
     /// framerate limit
     pub framerate : f32,
-    /// rotation
-    pub rotate : f32
 }
 
 /// Open a `json` or `json.gz` file, and deserialize it into a `Vec<Frame>`
@@ -75,11 +73,14 @@ pub fn open_file(path : &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
 pub struct Parviewer {
     config : Config,
     frames : Vec<Frame>,
-    palette : Palette,
+    /// Palette
+    pub palette : Palette,
     /// Track where we are
     pub timer : Timer,
-    window : Window,
-    camera : kiss3d::camera::ArcBall,
+    /// kiss3d Window
+    pub window : Window,
+    /// Camera
+    pub camera : kiss3d::camera::ArcBall,
     nodes : ObjectTracker<Sphere>,
     font : std::rc::Rc<kiss3d::text::Font>
 }
@@ -140,101 +141,107 @@ impl Parviewer {
     pub fn get_config(&self) -> &Config {
         &self.config
     }
+
+    /// Borrow current frame
+    pub fn get_frame(&self) -> &Frame {
+        let ix = self.timer.get_index();
+        &self.frames[ix]
+    }
+    
+    /// Draw some text in the window, with coordinates in the window frame (i.e., 0 to 1).
+    pub fn draw_text(&mut self, t: &str, x: f32, y: f32, color: Color) {
+        let max_width = self.window.width() * 2.;
+        // TODO: Figure out why the bottom is window.height() * 2.
+        let max_height = self.window.height() * 2. - (self.font.height() as f32);
+        let text_loc = na::Pnt2::new(x * max_width, y * max_height);
+        let text_color = color.to_pnt3();
+        
+        self.window.draw_text(t, &text_loc, &self.font, &text_color);
+    }
+    
+    /// Draw some text in the window, with coordinates in the window frame (i.e., 0 to 1).
+    pub fn draw_frame_text(&mut self, x: f32, y: f32, color: Color) {
+        let ix = self.timer.get_index();
+        let frame = &self.frames[ix];
+        if let Some(ref text) = frame.text {
+            let max_width = self.window.width() * 2.;
+            // TODO: Figure out why the bottom is window.height() * 2.
+            let max_height = self.window.height() * 2. - (self.font.height() as f32);
+            let text_loc = na::Pnt2::new(x * max_width, y * max_height);
+            let text_color = color.to_pnt3();
+            
+            self.window.draw_text(&*text, &text_loc, &self.font, &text_color);
+        }
+    }
+    
+    /// Standard key handling, called by run.
+    pub fn handle_events(&mut self) {
+        for mut event in self.window.events().iter() {
+            match event.value {
+                WindowEvent::Key(key, _, glfw::Action::Release, _) => {
+                    // Default to inhibiting, although this can be overridden
+                    let mut inhibit = true;
+                    match key {
+                        Key::Q => {return;},
+                        Key::Comma => {self.timer.slower();},
+                        Key::Period => {self.timer.faster();},
+                        Key::F => {self.timer.switch_direction();},
+                        Key::Up => {
+                            self.camera.set_pitch(PI/3.);
+                            self.camera.set_yaw(PI/4.);
+                        },
+                        Key::Down => {
+                            self.camera.set_pitch(PI/2.);
+                            self.camera.set_yaw(0.);
+                        },
+                        Key::W => {
+                            println!("yaw: {:6.2}, pitch: {:6.2}, distance: {:6.2}", 
+                                self.camera.yaw() * 180. / PI, 
+                                self.camera.pitch() * 180. / PI,
+                                self.camera.dist()
+                            );
+                        },
+                        Key::Num1 => {self.palette.toggle_partial(0);},
+                        Key::Num2 => {self.palette.toggle_partial(1);},
+                        Key::Num3 => {self.palette.toggle_partial(2);},
+                        Key::Num4 => {self.palette.toggle_partial(3);},
+                        Key::Num5 => {self.palette.toggle_partial(4);},
+                        Key::Num6 => {self.palette.toggle_partial(5);},
+                        Key::Num7 => {self.palette.toggle_partial(6);},
+                        Key::Num8 => {self.palette.toggle_partial(7);},
+                        Key::Num9 => {self.palette.set_all_partial(true);},
+                        Key::Num0 => {self.palette.set_all_partial(false);},
+                        code => {
+                            println!("You released the key with code: {:?}", code);
+                            inhibit = false;
+                        }
+
+                    }
+                    event.inhibited = inhibit;
+                },
+                _ => {}
+            }
+        }
+    }
     
     /// Start the whole running sequence.
-    pub fn run(&mut self) {
+    pub fn run<F>(&mut self, mut update: F)
+            where   F: FnMut(&mut Parviewer, bool) {
         let mut lastframe : isize = -1;
-        let mut text = None;
         while self.window.render_with_camera(&mut self.camera) {
-            for mut event in self.window.events().iter() {
-                match event.value {
-                    WindowEvent::Key(key, _, glfw::Action::Release, _) => {
-                        // Default to inhibiting, although this can be overridden
-                        let mut inhibit = true;
-                        match key {
-                            Key::Q => {return;},
-                            Key::Comma => {self.timer.slower();},
-                            Key::Period => {self.timer.faster();},
-                            Key::F => {self.timer.switch_direction();},
-                            Key::Up => {
-                                self.camera.set_pitch(PI/3.);
-                                self.camera.set_yaw(PI/4.);
-                            },
-                            Key::Down => {
-                                self.camera.set_pitch(PI/2.);
-                                self.camera.set_yaw(0.);
-                            },
-                            Key::W => {
-                                println!("yaw: {:6.2}, pitch: {:6.2}, distance: {:6.2}", 
-                                    self.camera.yaw() * 180. / PI, 
-                                    self.camera.pitch() * 180. / PI,
-                                    self.camera.dist()
-                                );
-                            },
-                            Key::Num1 => {self.palette.toggle_partial(0);},
-                            Key::Num2 => {self.palette.toggle_partial(1);},
-                            Key::Num3 => {self.palette.toggle_partial(2);},
-                            Key::Num4 => {self.palette.toggle_partial(3);},
-                            Key::Num5 => {self.palette.toggle_partial(4);},
-                            Key::Num6 => {self.palette.toggle_partial(5);},
-                            Key::Num7 => {self.palette.toggle_partial(6);},
-                            Key::Num8 => {self.palette.toggle_partial(7);},
-                            Key::Num9 => {self.palette.set_all_partial(true);},
-                            Key::Num0 => {self.palette.set_all_partial(false);},
-                            code => {
-                                println!("You released the key with code: {:?}", code);
-                                inhibit = false;
-                            }
-
-                        }
-                        event.inhibited = inhibit;
-                    },
-                    _ => {}
-                }
-            }
-
-            let i = self.timer.incr();
-
-            if lastframe != (i as isize) {
-                let ref frame = self.frames[i];
-                text = frame.text.clone();
+            self.timer.incr();
+            let ix = self.timer.get_index();
+            
+            let new_index = lastframe != (ix as isize);
+            if new_index {
+                let ref frame = self.frames[ix];
                 self.nodes.update(frame.spheres.iter(), &mut self.palette);
-                lastframe = i as isize;
+                lastframe = ix as isize;
             }
             
-            if self.config.rotate.abs() > 1e-6 {
-                let new_yaw = self.camera.yaw() + PI*self.config.rotate / 180.0;
-                self.camera.set_yaw(new_yaw);
-            }
+            update(self, new_index);
             
-            // TODO: add config
-            let text_color = na::Pnt3::new(1.0, 1.0, 1.0);
-            match text {
-                Some(ref t) => {
-                    self.window.draw_text(t, &na::orig(), &self.font, &text_color);
-                }
-                None => {}
-            }
-            
-            // TODO: Figure out why the bottom is window.height() * 2.
-            // Could be HiDPI
-            let text_loc = na::Pnt2::new(0.0, self.window.height() * 2. - (self.font.height() as f32));
-            let dt = self.timer.get_dt();
-            let dt_text = if dt >= 0.6 || dt.abs() < 1e-6 {
-                format!("{}", dt)
-            } else {
-                format!("1/{}", 1./dt)
-            };
-            
-            self.window.draw_text(
-                &*format!(
-                    "t:{:6.2}, dt:{}, coloring: {}", 
-                    self.timer.get_time(),
-                    dt_text,
-                    self.palette.partials_string()
-                ),
-                &text_loc, &self.font, &text_color
-            );
+            self.handle_events();
         };
     }
 }

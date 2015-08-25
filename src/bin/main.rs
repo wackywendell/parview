@@ -14,8 +14,6 @@
 #![deny(unused_qualifications)]
 #![deny(missing_docs)]
 #![deny(unused_results)]
-// Don't warn about dead code in this module when testing, its annoying.
-#![cfg_attr(test, allow(dead_code))]
 
 extern crate rustc_serialize;
 extern crate docopt;
@@ -24,7 +22,7 @@ extern crate parview;
 
 use std::path::Path;
 
-use parview::{misc,Palette,Config,TomlConfig,Frame,Parviewer};
+use parview::{misc,Palette,Color,Config,TomlConfig,Frame,Parviewer};
 
 // Write the Docopt usage string.
 docopt!(Args derive Debug, "
@@ -89,11 +87,34 @@ fn run() -> Result<(), Box<std::error::Error>> {
     
     let mut viewer = try!(Parviewer::new(frames, palette, config));
     let _ = viewer.timer.at_least(toml_config.fps);
-    viewer.run();
+    let text_color = Color(255, 255, 255);
+    
+    viewer.run(|viewer, _| {
+        viewer.draw_frame_text(0., 0., text_color);
+        
+        let dt = viewer.timer.get_dt();
+        let dt_text = if dt >= 0.6 || dt.abs() < 1e-6  || dt <= -0.6 {
+            format!("{}", dt)
+        } else if dt > 0. {
+            format!("1/{}", 1./dt)
+        } else {
+            format!("-1/{}", -1./dt)
+        };
+        
+        let text = format!(
+            "t:{:6.2}, dt:{}, coloring: {}", 
+            viewer.timer.get_time(),
+            dt_text,
+            viewer.palette.partials_string()
+        );
+        
+        viewer.draw_text(&*text, 0., 1., text_color);
+    });
     Ok(())
 }
 
-fn main() {
+/// The main entry point.
+pub fn main() {
     if let Err(err) = run() {
         println!("ERROR.");
         

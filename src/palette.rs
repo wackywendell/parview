@@ -2,6 +2,7 @@
 
 use serde;
 use rustc_serialize; // needed for toml
+use na;
 
 use std::error::Error;
 use std::io::Read;
@@ -33,13 +34,21 @@ pub static DEFAULT_COLORS : [(u8, u8, u8); 11] = [
 ];
 
 impl Color {
-    fn to_floats(self) -> (f32, f32, f32) {
+    /// Convert to a 3-tuple, from 0 to 1
+    pub fn to_floats(self) -> (f32, f32, f32) {
         let Color(r,g,b) = self;
         (
             (r as f32) / (u8::max_value() as f32),
             (g as f32) / (u8::max_value() as f32),
             (b as f32) / (u8::max_value() as f32),
         )
+    }
+    
+    /// Convert to `na::Pnt3`, needed for `kiss3d::window::Window::draw_text`
+    pub fn to_pnt3(self) -> na::Pnt3<f32> {
+        let (r,g,b) = self.to_floats();
+        
+        na::Pnt3::new(r,g,b)
     }
 }
 

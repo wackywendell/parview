@@ -55,7 +55,6 @@ impl TomlConfig {
             height : self.height.unwrap_or(self.width),
             distance : self.distance,
             pauseloop : self.pauseloop,
-            rotate : self.rotate,
             framerate : self.framerate
         }
     }
