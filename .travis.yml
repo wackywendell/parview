@@ -9,12 +9,18 @@ matrix:
     - rust: stable
     - rust: beta
 
+
+env:
+  global:
+    - LD_LIBRARY_PATH: /usr/local/lib
+
 # from kiss3d
 before_install:
   # This ppa provides cmake 2.8.11, which travis doesn't have yet
   - sudo add-apt-repository --yes ppa:kalakris/cmake
   - sudo apt-get update -qq
 install:
+  # cmake and glfw, for kiss3d
   - sudo apt-get install cmake
   - sudo apt-get install libXxf86vm-dev
   - git clone https://github.com/glfw/glfw.git
@@ -22,4 +28,13 @@ install:
   - git checkout 3.0.3
   - cmake -DBUILD_SHARED_LIBS=ON
   - make
+  - sudo make install
+
+  # ffmpeg, for kiss3d_recording
+  - sudo apt-get install yasm
+  - wget http://www.ffmpeg.org/releases/ffmpeg-2.2.4.tar.bz2
+  - tar -xjf ffmpeg-2.2.4.tar.bz2
+  - cd ffmpeg-2.2.4
+  - ./configure --enable-shared --disable-static --prefix=/usr/local
+  - make -j2
   - sudo make install
