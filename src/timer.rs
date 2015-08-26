@@ -111,6 +111,21 @@ impl Timer {
         }
     }
     
+    /// Total time before looping
+    pub fn total_loop_time(&self) -> Option<f32> {
+        match (self.len, self.loop_pause) {
+            (None, _) => {
+                    None
+            },
+            (Some(len), None) => {
+                Some(len as f32)
+            },
+            (Some(len), Some(pause)) => {
+                Some((len as f32) + pause)
+            }
+        }
+    }
+    
     /// Get the current index into the array
     pub fn get_index(&self) -> usize {
         match (self.len, self.loop_pause) {
@@ -130,8 +145,8 @@ impl Timer {
             (Some(len), Some(pause)) => {
                 // We have a fixed length, but we don't loop.
                 let loop_len = (len as f32) + pause;
-                let ix = (self.t % loop_len) as usize;
-                if ix >= len { len - 1 } else { ix }
+                 let ix = (self.t % loop_len) as usize;
+                 if ix >= len { len - 1 } else { ix }
             }
         }
     }

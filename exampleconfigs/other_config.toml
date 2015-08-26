@@ -7,14 +7,14 @@ fov = 34.0
 # Set distance between camera and box (L)
 distance = 3.0
 # Set window width (pixels) [default: 600]
-width = 1500
+width = 1024
 # Set window height, if different from width.
-# height = 600
+height = 1024
 # When finished, pause for FRAMES frames, then loop. Do not set for no loop.
-pauseloop = 10.0
+pauseloop = 48.0
 # Continuous box rotation (angle / frame)
 rotate = 1.0
 # sets maximum framerate of drawing, independent of actual frames.
 framerate = 24.0
 # Rate of drawing frames.
-fps = 2.0
+fps = 12.0

@@ -19,3 +19,6 @@ toml = "*"
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"
+
+[dependencies.kiss3d_recording]
+git = "https://github.com/sebcrozet/kiss3d_recording"

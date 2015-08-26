@@ -20,6 +20,7 @@ pub struct TomlConfig {
     /// When finished, pause for FRAMES frames, then loop. None does not loop. [default: None]
     pub pauseloop : Option<f32>,
     /// Continuous box rotation (angle / frame) [default: 0]
+    // TODO: this currently is ignored.
     pub rotate : f32,
     /// Framerate: sets maximum framerate of drawing, independent of actual frames. [default: 24]
     pub framerate : f32,

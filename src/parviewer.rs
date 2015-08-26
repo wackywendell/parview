@@ -229,8 +229,15 @@ impl Parviewer {
     
     /// Start the whole running sequence.
     pub fn run<F>(&mut self, mut update: F)
-            where   F: FnMut(&mut Parviewer, bool) {
-        let mut lastframe : isize = -1;
+            where F: FnMut(&mut Parviewer, bool) {
+        {
+            // Set it to the first position, and then return the borrow of `self` for
+            // the render function to use
+            let ref frame = self.frames[0];
+            self.nodes.update(frame.spheres.iter(), &mut self.palette);
+        }
+        
+        let mut lastframe : isize = 0;
         while self.window.render_with_camera(&mut self.camera) {
             self.timer.incr();
             let ix = self.timer.get_index();
