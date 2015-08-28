@@ -245,8 +245,7 @@ impl Parviewer {
             // Set it to the first position, and then return the borrow of `self` for
             // the render function to use
             let ref frame = self.frames[0];
-            self.nodes.update(frame.spheres.iter(), &mut self.palette);
-            self.nodes.update(frame.spherocylinders.iter(), &mut self.palette);
+            self.nodes.update(frame, &mut self.palette);
         }
         
         let mut lastframe : isize = 0;
@@ -257,8 +256,7 @@ impl Parviewer {
             let new_index = lastframe != (ix as isize);
             if new_index {
                 let ref frame = self.frames[ix];
-                self.nodes.update(frame.spheres.iter(), &mut self.palette);
-                self.nodes.update(frame.spherocylinders.iter(), &mut self.palette);
+                self.nodes.update(frame, &mut self.palette);
                 lastframe = ix as isize;
             }
             

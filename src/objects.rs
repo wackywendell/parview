@@ -171,11 +171,15 @@ impl ObjectTracker {
     
     /// The meat of `ObjectTracker`. Update old objects and the scene to match
     /// new objects
-    pub fn update<'a, I : Iterator<Item=&'a T>, T>(&'a mut self, iter : I, palette : &mut Palette) 
-            where ObjectEnum: From<T>, T: Object, T: 'a {
+    pub fn update(&mut self, frame : &Frame, palette : &mut Palette) {
         // TODO: this used to be &ObjectID, which is probably faster
         let mut seen : HashSet<ObjectID> = FromIterator::from_iter(self.objects.keys()
             .map(|ref k|{(*k).clone()}));
+            
+        let iter = 
+            frame.spheres.iter().map(|s| ObjectEnum::Sphere(s.clone()))
+            .chain(frame.spherocylinders.iter().map(|s| ObjectEnum::Spherocylinder(s.clone())))
+        ;
         
         for new_object in iter {
             let name : & ObjectID = new_object.id();
@@ -198,12 +202,12 @@ impl ObjectTracker {
             }
         }
         
-        // for k in seen {
-        //     let _ = self.objects.get_mut(&k).map(|&mut (_, ref mut node)| {
-        //         let _ = node.unlink();
-        //     });
-        //     let _ = self.objects.remove(&k);
-        // }
+        for k in seen {
+            let _ = self.objects.get_mut(&k).map(|&mut (_, ref mut node)| {
+                let _ = node.unlink();
+            });
+            let _ = self.objects.remove(&k);
+        }
     }
 }
 
