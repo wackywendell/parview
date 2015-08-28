@@ -82,7 +82,10 @@ pub struct Parviewer {
     /// Camera
     pub camera : kiss3d::camera::ArcBall,
     nodes : ObjectTracker,
-    font : std::rc::Rc<kiss3d::text::Font>
+    font : std::rc::Rc<kiss3d::text::Font>,
+    
+    /// Do not increment timer when paused
+    pub paused : bool
 }
 
 impl Parviewer {
@@ -144,7 +147,8 @@ impl Parviewer {
             window : window,
             nodes : nodes,
             camera : arc_ball,
-            font : font
+            font : font,
+            paused : false
         })
     }
     
@@ -215,6 +219,9 @@ impl Parviewer {
                                 self.camera.dist()
                             );
                         },
+                        Key::Space => {
+                            self.paused = !self.paused;
+                        },
                         Key::Num1 => {self.palette.toggle_partial(0);},
                         Key::Num2 => {self.palette.toggle_partial(1);},
                         Key::Num3 => {self.palette.toggle_partial(2);},
@@ -250,7 +257,7 @@ impl Parviewer {
         
         let mut lastframe : isize = 0;
         while self.window.render_with_camera(&mut self.camera) {
-            self.timer.incr();
+            if !self.paused {self.timer.incr();}
             let ix = self.timer.get_index();
             
             let new_index = lastframe != (ix as isize);
