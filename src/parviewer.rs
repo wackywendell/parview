@@ -18,7 +18,7 @@ use std::f32::consts::PI;
 use timer::Timer;
 use misc;
 use palette::{Color,Palette};
-use objects::{Sphere,Frame,ObjectTracker};
+use objects::{Frame,ObjectTracker};
 
 /// The configuration options for a Parviewer instance.
 #[derive(Debug, RustcDecodable, RustcEncodable, Serialize, Deserialize)]
@@ -81,7 +81,7 @@ pub struct Parviewer {
     pub window : Window,
     /// Camera
     pub camera : kiss3d::camera::ArcBall,
-    nodes : ObjectTracker<Sphere>,
+    nodes : ObjectTracker,
     font : std::rc::Rc<kiss3d::text::Font>
 }
 
@@ -110,6 +110,17 @@ impl Parviewer {
         window.set_framerate_limit(Some(config.framerate as u64));
 
         let nodes = ObjectTracker::new(&mut window);
+        
+        // let mut capsule = window.add_capsule(0.25, 0.5);
+        // // capsule.set_local_scale(1.0, 1.0, 1.0);
+        // 
+        // let diam = 0.5;
+        // let axnorm = 1.0;
+        // let h = axnorm - diam;
+        // 
+        // let mut capsule2 = window.add_capsule(0.5, h / diam);
+        // capsule2.set_local_scale(diam, diam, diam);
+        // capsule2.set_local_translation(na::Vec3::new(0.5, 0., 0.));
         
         // TODO: config?
         let dts_first = vec![1., 2., 3., 4., 6., 8., 12., 16., 24., 32., 48., 64., 96., 128.];
@@ -163,14 +174,14 @@ impl Parviewer {
     pub fn draw_frame_text(&mut self, x: f32, y: f32, color: Color) {
         let ix = self.timer.get_index();
         let frame = &self.frames[ix];
-        if let Some(ref text) = frame.text {
+        if frame.text.len() > 0 {
             let max_width = self.window.width() * 2.;
             // TODO: Figure out why the bottom is window.height() * 2.
             let max_height = self.window.height() * 2. - (self.font.height() as f32);
             let text_loc = na::Pnt2::new(x * max_width, y * max_height);
             let text_color = color.to_pnt3();
             
-            self.window.draw_text(&*text, &text_loc, &self.font, &text_color);
+            self.window.draw_text(&*frame.text, &text_loc, &self.font, &text_color);
         }
     }
     
@@ -235,6 +246,7 @@ impl Parviewer {
             // the render function to use
             let ref frame = self.frames[0];
             self.nodes.update(frame.spheres.iter(), &mut self.palette);
+            self.nodes.update(frame.spherocylinders.iter(), &mut self.palette);
         }
         
         let mut lastframe : isize = 0;
@@ -246,6 +258,7 @@ impl Parviewer {
             if new_index {
                 let ref frame = self.frames[ix];
                 self.nodes.update(frame.spheres.iter(), &mut self.palette);
+                self.nodes.update(frame.spherocylinders.iter(), &mut self.palette);
                 lastframe = ix as isize;
             }
             

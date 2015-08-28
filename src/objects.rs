@@ -11,6 +11,7 @@ use kiss3d::window::Window;
 use std::collections::{HashSet,HashMap};
 use std::collections::hash_map::Entry;
 use std::iter::FromIterator;
+use std::convert::From;
 
 use na::{RotationTo,Rotation,Norm};
 
@@ -60,13 +61,37 @@ impl ObjectID{
     }
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Clone)]
+/// A single frame, which is a series of spheres
+struct MinimalFrame {
+    /// the spheres
+    pub spheres : Option<Vec<Sphere>>,
+    /// optional spherocylinders
+    pub spherocylinders : Option<Vec<Spherocylinder>>,
+    /// Text to display
+    pub text : Option<String>
+}
+
+#[derive(Serialize, Clone)]
 /// A single frame, which is a series of spheres
 pub struct Frame {
     /// the spheres
     pub spheres : Vec<Sphere>,
+    /// optional spherocylinders
+    pub spherocylinders : Vec<Spherocylinder>,
     /// Text to display
-    pub text : Option<String>
+    pub text : String
+}
+
+impl Deserialize for Frame {
+    fn deserialize<D: Deserializer>(d: &mut D) -> Result<Self, D::Error> {
+        let minim = try!(MinimalFrame::deserialize(d));
+        Ok(Frame {
+            spheres : minim.spheres.unwrap_or(vec![]),
+            spherocylinders : minim.spherocylinders.unwrap_or(vec![]),
+            text : minim.text.unwrap_or(String::new())
+        })
+    }
 }
 
 /// An object that will be drawable by Parview.
@@ -83,26 +108,62 @@ pub trait Object : Clone {
     fn update(&mut self, other: &Self, nodes: &mut SceneNode);
 }
 
+/// An enum of the possible shapes, for use with the ObjectTracker.
+#[derive(Clone)]
+pub enum ObjectEnum {
+    /// A sphere
+    Sphere(Sphere),
+    /// a spherocylinder
+    Spherocylinder(Spherocylinder)
+}
+
+impl Object for ObjectEnum {
+    fn id(&self) -> &ObjectID {
+        match self {
+            &ObjectEnum::Sphere(ref s) => s.id(),
+            &ObjectEnum::Spherocylinder(ref s) => s.id()
+        }
+    }
+    
+    fn new_node(&self, window : &mut SceneNode) -> SceneNode {
+        match self {
+            &ObjectEnum::Sphere(ref s) => s.new_node(window),
+            &ObjectEnum::Spherocylinder(ref s) => s.new_node(window)
+        }
+    }
+    
+    fn update(&mut self, other: &Self, nodes: &mut SceneNode) {
+        match (self, other) {
+            (&mut ObjectEnum::Sphere(ref mut s), &ObjectEnum::Sphere(ref o)) => s.update(o, nodes),
+            (&mut ObjectEnum::Sphere(_), _) => {unimplemented!()},
+            (&mut ObjectEnum::Spherocylinder(ref mut s), &ObjectEnum::Spherocylinder(ref o)) => {
+                s.update(o, nodes)
+            },
+            (&mut ObjectEnum::Spherocylinder(_), _) => {unimplemented!()},
+        }
+    }
+}
+
 /// Keeps track of what `Object` maps to what `SceneNode`, and handles updates
-pub struct ObjectTracker<T : Object> {
+pub struct ObjectTracker {
     /// The set of objects
-    objects : HashMap<ObjectID, (T, SceneNode)>,
+    objects : HashMap<ObjectID, (ObjectEnum, SceneNode)>,
     /// The scene to which to attach new objects
     parent : SceneNode
 }
 
-// TODO: Should this be something like this:
-/*
-/// Tracks all objects, regardless of type
-pub struct ObjectTracker<'a> {
-    objects : AnyMap<HashMap<&'a ObjectID, (T, SceneNode)>>,
+impl From<Sphere> for ObjectEnum {
+    fn from(s : Sphere) -> ObjectEnum { ObjectEnum::Sphere(s) }
 }
-*/
 
-impl<T : Object> ObjectTracker<T> {
+impl From<Spherocylinder> for ObjectEnum {
+    fn from(s : Spherocylinder) -> ObjectEnum { ObjectEnum::Spherocylinder(s) }
+}
+
+impl ObjectTracker {
     /// Create a new `ObjectTracker` associated with a given `Window`.
-    pub fn new(window: &mut Window) -> ObjectTracker<T> {
-        ObjectTracker{
+    pub fn new(window: &mut Window) -> ObjectTracker {
+        ObjectTracker {
             objects: HashMap::new(),
             parent: window.add_group()
         }
@@ -110,7 +171,8 @@ impl<T : Object> ObjectTracker<T> {
     
     /// The meat of `ObjectTracker`. Update old objects and the scene to match
     /// new objects
-    pub fn update<'a, I : Iterator<Item=&'a T>>(&'a mut self, iter : I, palette : &mut Palette) {
+    pub fn update<'a, I : Iterator<Item=&'a T>, T>(&'a mut self, iter : I, palette : &mut Palette) 
+            where ObjectEnum: From<T>, T: Object, T: 'a {
         // TODO: this used to be &ObjectID, which is probably faster
         let mut seen : HashSet<ObjectID> = FromIterator::from_iter(self.objects.keys()
             .map(|ref k|{(*k).clone()}));
@@ -120,7 +182,7 @@ impl<T : Object> ObjectTracker<T> {
             match self.objects.entry(name.clone()) {
                 Entry::Occupied(mut entry) => {
                     let &mut (ref mut obj, ref mut node) = entry.get_mut();
-                    obj.update(&new_object, node);
+                    obj.update(&ObjectEnum::from(new_object.clone()), node);
                     palette.set_color(obj.id(), node);
                     //let is_invisible = node.data().is_root();
                     // if is_invisible {
@@ -131,17 +193,17 @@ impl<T : Object> ObjectTracker<T> {
                 Entry::Vacant(v) => {
                     let mut node = new_object.new_node(&mut self.parent);
                     palette.set_color(new_object.id(), &mut node);
-                    let _ = v.insert((new_object.clone(), node));
+                    let _ = v.insert((ObjectEnum::from(new_object.clone()), node));
                 }
             }
         }
         
-        for k in seen {
-            let _ = self.objects.get_mut(&k).map(|&mut (_, ref mut node)| {
-                let _ = node.unlink();
-            });
-            let _ = self.objects.remove(&k);
-        }
+        // for k in seen {
+        //     let _ = self.objects.get_mut(&k).map(|&mut (_, ref mut node)| {
+        //         let _ = node.unlink();
+        //     });
+        //     let _ = self.objects.remove(&k);
+        // }
     }
 }
 
@@ -168,7 +230,7 @@ impl Object for Sphere {
     fn id(&self) -> &ObjectID {&self.names}
     
     fn new_node(&self, parent : &mut SceneNode) -> SceneNode {
-        let mut node = parent.add_sphere(self.diameter);
+        let mut node = parent.add_sphere(self.diameter / 2.0);
         node.set_local_translation(self.x());
         
         node
@@ -218,22 +280,35 @@ impl Object for Spherocylinder {
     fn id(&self) -> &ObjectID {&self.names}
     
     fn new_node(&self, parent : &mut SceneNode) -> SceneNode {
-        let mut node = parent.add_sphere(self.diameter);
+        let diam = self.diameter; // radius
+        let h = self.get_axis().norm() - self.diameter;
+        // We start with a radius of 0.5 (diameter 1), and internal height h / diam.
+        // Then we scale by diam.
+        let mut node = parent.add_capsule(0.5, h / diam);
+        node.set_local_scale(diam, diam, diam);
         node.set_local_translation(self.x());
         
-        let z = na::Vec3::new(0., 0., 1.);
-        let rot = z.rotation_to(&self.get_axis()).rotation();
-        node.set_local_translation(rot);
+        let y = na::Vec3::new(0., 1., 0.);
+        let rot = y.rotation_to(&self.get_axis()).rotation();
+        // println!("new: {:?}", self.names);
+        // println!("ax: {:?}, rot: {:?}", self.get_axis(), rot);
+        node.set_local_rotation(rot);
         
         node
     }
     
     fn update(&mut self, other: &Self, node: &mut SceneNode){
-        let diameter_change = (other.diameter - self.diameter).abs();
-        let length_change = (other.get_axis().norm() - self.get_axis().norm()).abs();
+        let diameter_change = ((other.diameter - self.diameter) / self.diameter).abs();
+        
+        let (l, l_new) = (self.get_axis().norm(), other.get_axis().norm());
+        let length_change = ((l_new - l) / l).abs();
+        let axis_change = (other.get_axis() - self.get_axis()).norm() / self.get_axis().norm();
+        
         
         if diameter_change > EPSILON || length_change > EPSILON {
-            if (diameter_change - length_change).abs() > EPSILON {
+            if (diameter_change - length_change).abs() > 1e-3 {
+                println!("diameter_change: {:?}, length_change: {:?}", 
+                        diameter_change, length_change);
                 panic!("Don't know how to stretch spherocylinders.")
             }
             
@@ -247,12 +322,11 @@ impl Object for Spherocylinder {
             node.set_local_translation(self.x());
         }
         
-        let axis_change = (other.get_axis() - self.get_axis()).norm().abs();
         if axis_change > EPSILON {
             self.axis = other.axis;
-            let z = na::Vec3::new(0., 0., 1.);
-            let rot = z.rotation_to(&self.get_axis()).rotation();
-            node.set_local_translation(rot);
+            let y = na::Vec3::new(0.0, 1.0, 0.0);
+            let rot = y.rotation_to(&self.get_axis()).rotation();
+            node.set_local_rotation(rot);
         }
     }
 }

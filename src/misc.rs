@@ -75,7 +75,8 @@ pub fn generate_frame(path : &Path) -> io::Result<Vec<objects::Frame>> {
 
     let f = objects::Frame {
         spheres : spheres,
-        text : None
+        spherocylinders : vec![],
+        text : String::new()
     };
 
     let mut framevec : Vec<objects::Frame> = vec!();
@@ -96,13 +97,15 @@ pub fn generate_frame(path : &Path) -> io::Result<Vec<objects::Frame>> {
                         names: s.names.clone()
                     }
                 }).collect(),
-            text : Some(format!("Frame {} with {} spheres", i, f.spheres.len()))
+                
+            spherocylinders : vec![],
+            text : format!("Frame {} with {} spheres", i, f.spheres.len())
         };
 
         if i > 10 && i < 20 {
             let l = f2.spheres.len();
             f2.spheres.truncate(l - 8);
-            f2.text = Some(format!("Frame {} with {} spheres", i, f2.spheres.len()));
+            f2.text = format!("Frame {} with {} spheres", i, f2.spheres.len());
         }
         framevec.push(f2);
     }
