@@ -12,7 +12,11 @@ use std::collections::{HashSet,HashMap};
 use std::collections::hash_map::Entry;
 use std::iter::FromIterator;
 
+use na::{RotationTo,Rotation,Norm};
+
 use palette::Palette;
+
+const EPSILON : f32 = 1e-6;
 
 /// The way to ID an object. This is basically a list of strings.
 ///
@@ -142,8 +146,7 @@ impl<T : Object> ObjectTracker<T> {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
-/// A single frame, containing spheres
-/// format is (location, diameter, Option(color triple))
+/// Data object for a spherical particle
 pub struct Sphere {
     /// location of the sphere
     pub loc : (f32,f32,f32),
@@ -180,6 +183,76 @@ impl Object for Sphere {
         if self.loc != other.loc {
             self.loc = other.loc;
             node.set_local_translation(self.x());
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+/// Data object for a spherocylindrical particle
+pub struct Spherocylinder {
+    /// location of the sphere
+    pub loc : (f32,f32,f32),
+    /// The central axis of the sphere
+    pub axis : (f32,f32,f32),
+    /// Diameter
+    pub diameter : f32,
+    /// Color. if none, one will be assigned
+    pub names : ObjectID,
+}
+
+impl Spherocylinder {
+    /// get the location as a Vec3
+    pub fn x(&self) -> na::Vec3<f32> {
+        let (x,y,z) = self.loc;
+        na::Vec3::new(x,y,z)
+    }
+    
+    /// get the axis as a Vec3
+    pub fn get_axis(&self) -> na::Vec3<f32> {
+        let (x,y,z) = self.axis;
+        na::Vec3::new(x,y,z)
+    }
+}
+
+impl Object for Spherocylinder {
+    fn id(&self) -> &ObjectID {&self.names}
+    
+    fn new_node(&self, parent : &mut SceneNode) -> SceneNode {
+        let mut node = parent.add_sphere(self.diameter);
+        node.set_local_translation(self.x());
+        
+        let z = na::Vec3::new(0., 0., 1.);
+        let rot = z.rotation_to(&self.get_axis()).rotation();
+        node.set_local_translation(rot);
+        
+        node
+    }
+    
+    fn update(&mut self, other: &Self, node: &mut SceneNode){
+        let diameter_change = (other.diameter - self.diameter).abs();
+        let length_change = (other.get_axis().norm() - self.get_axis().norm()).abs();
+        
+        if diameter_change > EPSILON || length_change > EPSILON {
+            if (diameter_change - length_change).abs() > EPSILON {
+                panic!("Don't know how to stretch spherocylinders.")
+            }
+            
+            self.diameter = other.diameter;
+            self.axis = other.axis;
+            node.set_local_scale(self.diameter, self.diameter, self.diameter);
+        }
+        
+        if self.loc != other.loc {
+            self.loc = other.loc;
+            node.set_local_translation(self.x());
+        }
+        
+        let axis_change = (other.get_axis() - self.get_axis()).norm().abs();
+        if axis_change > EPSILON {
+            self.axis = other.axis;
+            let z = na::Vec3::new(0., 0., 1.);
+            let rot = z.rotation_to(&self.get_axis()).rotation();
+            node.set_local_translation(rot);
         }
     }
 }
