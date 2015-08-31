@@ -44,25 +44,20 @@ pub fn deserialize_by_ext<T: serde::Deserialize>(path : &Path) -> Result<T, serd
 
     let ext : Option<&str> = path.extension().and_then(|s| {s.to_str()});
 
-    if ext == Some("gz") {
-        println!("gz ext!");
-    }
-
-    let coded_opt = match ext {
+    let coded = match ext {
         Some("gz") => {
             let mut gzbuf = try!(GzDecoder::new(buf));
-            serde_json::de::from_reader(&mut gzbuf)
+            try!(serde_json::de::from_reader(&mut gzbuf))
         },
         _ => {
-            serde_json::de::from_reader(&mut buf)
+            try!(serde_json::de::from_reader(&mut buf))
             }
     };
-
-    coded_opt
+    Ok(coded)
 }
 
 /// Generate an example json file
-pub fn generate_frame(path : &Path) -> io::Result<Vec<objects::Frame>> {
+pub fn generate_frame(path : &Path) -> Result<Vec<objects::Frame>, serde_json::error::Error> {
     let spheres = (0..16).map(|n| {
         let loc : na::Vec3<f32> = rand_vec();
         let s : f32 = random();
@@ -110,7 +105,7 @@ pub fn generate_frame(path : &Path) -> io::Result<Vec<objects::Frame>> {
         framevec.push(f2);
     }
 
-    let mut file = File::create(&path).unwrap();
+    let mut file = try!(File::create(&path));
     
     try!(serde_json::ser::to_writer_pretty(&mut file, &framevec));
     Ok(framevec)
