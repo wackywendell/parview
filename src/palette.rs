@@ -4,6 +4,11 @@ use serde;
 use rustc_serialize; // needed for toml
 use na;
 
+#[cfg(test)]
+use toml;
+#[cfg(test)]
+use serde_json;
+
 use std::error::Error;
 use std::io::Read;
 
@@ -15,7 +20,7 @@ use kiss3d::scene::SceneNode;
 use objects::ObjectID;
 
 /// An RGB color
-#[derive(Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone)]
+#[derive(Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone,Debug)]
 pub struct Color(pub u8,pub u8,pub u8);
 
 /// Default colors to use, when no others are specified.
@@ -102,7 +107,7 @@ impl PartialIDer {
 }
 
 /// A way to convert string names to colors
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Palette {
     default_colors : Vec<Color>,
     partials : PartialIDer,
@@ -244,8 +249,6 @@ impl From<PaletteBasic> for Palette {
     }
 }
 
-//TODO: add test for round-trip through toml and json
-
 impl serde::Serialize for Color {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: serde::Serializer {
         let &Color(r,g,b) = self;
@@ -298,4 +301,22 @@ impl rustc_serialize::Decodable for Palette {
         let p = try!(PaletteBasic::decode(d));
         Ok(Palette::from(p))
     }
+}
+
+#[test]
+fn palette_toml_round_trip() {
+    let p = Palette::default();
+    
+    let s = toml::encode_str(&p);
+    let p2 = toml::decode_str(&*s).unwrap();
+    assert_eq!(p, p2);
+}
+
+#[test]
+fn palette_json_round_trip() {
+    let p = Palette::default();
+    
+    let s = serde_json::to_string_pretty(&p).unwrap();
+    let p2 = serde_json::from_str(&*s).unwrap();
+    assert_eq!(p, p2);
 }
