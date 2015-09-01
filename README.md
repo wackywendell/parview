@@ -23,5 +23,6 @@ The conversion from `.mpg` to `.gif` was accomplished with this command:
 
 ```bash
 ffmpeg -i spherocylinders.mpg -r 12 -vf scale=600:-1:flags=lanczos frames/spherocylinders%04d.png 
-convert  -delay 0.08333333 -layers removeDups -layers Optimize -loop 0 frames/*.png exampledata/spherocylinders.gif
+convert -delay 0.08333333 -layers removeDups -layers OptimizePlus -loop 0 frames/*.png -dither None exampledata/spherocylinders.gif
+
 ```
