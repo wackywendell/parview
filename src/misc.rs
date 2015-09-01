@@ -164,13 +164,13 @@ pub fn draw_cube(window : &mut Window) -> kiss3d::scene::SceneNode {
         .collect();
 
     let mut cube = window.add_group();
-    for rot in rotations.iter() {
-        for t in translations.iter() {
+    for rot in &rotations {
+        for t in &translations {
             let mut caps = cube.add_capsule(0.01, 1.0);
             caps.append_translation(t);
-            match rot {
-                &Some(r) => {caps.append_rotation(&(r * std::f32::consts::FRAC_PI_2))},
-                &None => {}
+            match *rot {
+                Some(r) => {caps.append_rotation(&(r * std::f32::consts::FRAC_PI_2))},
+                None => {}
             }
             //caps.append_translation(&Vec3::new(-0.5, 0.0, -0.5));
         }

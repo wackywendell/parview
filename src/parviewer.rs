@@ -56,7 +56,7 @@ pub fn open_file(path : &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
         println!("gz ext!");
     }
 
-    let coded_opt = match ext {
+    let coded = try!(match ext {
         Some("gz") => {
             let mut gzbuf = try!(GzDecoder::new(buf));
             serde_json::de::from_reader(&mut gzbuf)
@@ -64,9 +64,9 @@ pub fn open_file(path : &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
         _ => {
             serde_json::de::from_reader(&mut buf)
             }
-    };
+    });
 
-    coded_opt
+    Ok(coded)
 }
 
 /// The main entry point,maintaining a window, a Config, objects, etc.
@@ -178,7 +178,7 @@ impl Parviewer {
     pub fn draw_frame_text(&mut self, x: f32, y: f32, color: Color) {
         let ix = self.timer.get_index();
         let frame = &self.frames[ix];
-        if frame.text.len() > 0 {
+        if frame.text.is_empty() {
             let max_width = self.window.width() * 2.;
             // TODO: Figure out why the bottom is window.height() * 2.
             let max_height = self.window.height() * 2. - (self.font.height() as f32);

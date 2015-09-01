@@ -44,13 +44,13 @@ impl rustc_serialize::Encodable for ObjectID {
 
 impl Deserialize for ObjectID {
     fn deserialize<D: Deserializer>(d: &mut D) -> Result<Self, D::Error> {
-        Vec::deserialize(d).map(|n| ObjectID(n))
+        Vec::deserialize(d).map(ObjectID)
     }
 }
 
 impl rustc_serialize::Decodable for ObjectID {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Vec::decode(d).map(|n| ObjectID(n))
+        Vec::decode(d).map(ObjectID)
     }
 }
 
@@ -119,16 +119,16 @@ pub enum ObjectEnum {
 
 impl Object for ObjectEnum {
     fn id(&self) -> &ObjectID {
-        match self {
-            &ObjectEnum::Sphere(ref s) => s.id(),
-            &ObjectEnum::Spherocylinder(ref s) => s.id()
+        match *self {
+            ObjectEnum::Sphere(ref s) => s.id(),
+            ObjectEnum::Spherocylinder(ref s) => s.id()
         }
     }
     
     fn new_node(&self, window : &mut SceneNode) -> SceneNode {
-        match self {
-            &ObjectEnum::Sphere(ref s) => s.new_node(window),
-            &ObjectEnum::Spherocylinder(ref s) => s.new_node(window)
+        match *self {
+            ObjectEnum::Sphere(ref s) => s.new_node(window),
+            ObjectEnum::Spherocylinder(ref s) => s.new_node(window)
         }
     }
     
@@ -204,7 +204,7 @@ impl ObjectTracker {
         
         for k in seen {
             let _ = self.objects.get_mut(&k).map(|&mut (_, ref mut node)| {
-                let _ = node.unlink();
+                node.unlink();
             });
             let _ = self.objects.remove(&k);
         }
@@ -241,7 +241,7 @@ impl Object for Sphere {
     }
     
     fn update(&mut self, other: &Self, node: &mut SceneNode){
-        if self.diameter != other.diameter {
+        if (self.diameter - other.diameter).abs() < EPSILON {
             self.diameter = other.diameter;
             node.set_local_scale(self.diameter, self.diameter, self.diameter);
         }

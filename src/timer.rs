@@ -18,7 +18,7 @@ pub struct Timer {
 impl Timer {
     /// Make a new timer
     pub fn new(dts : Vec<f32>, len : Option<usize>) -> Timer {
-        let mut new_dts = if dts.len() == 0 {
+        let mut new_dts = if dts.is_empty() {
             vec!(1f32)
         } else {
             dts
@@ -47,7 +47,7 @@ impl Timer {
                 break;
             }
         }
-        return self.get_dt();
+        self.get_dt()
     }
 
     /// Switch forwards vs. backwards. If stopped, it stays stopped.

@@ -21,7 +21,7 @@ use objects::ObjectID;
 
 /// An RGB color
 #[derive(Eq,PartialEq,Ord,PartialOrd,Hash,Copy,Clone,Debug)]
-pub struct Color(pub u8,pub u8,pub u8);
+pub struct Color(pub u8, pub u8, pub u8);
 
 /// Default colors to use, when no others are specified.
 pub static DEFAULT_COLORS : [(u8, u8, u8); 11] = [
@@ -129,12 +129,12 @@ impl Palette {
         let partial = self.partials.as_id(name);
         let (next_color, default_colors, assigned) = 
             (&mut self.next_color, &self.default_colors, &mut self.assigned);
-        let color = *assigned.entry(partial).or_insert_with(|| {
+        
+        *assigned.entry(partial).or_insert_with(|| {
             let col = default_colors[*next_color];
             *next_color = (*next_color + 1) % default_colors.len();
             col
-        });
-        return color
+        })
     }
     
     /// Toggle whether or not to use a certain partial value
@@ -189,7 +189,7 @@ struct AssignmentRef<'a> {
     color : &'a Color
 }
 
-fn to_assignments<'a>(assigned : &'a HashMap<ObjectID, Color>) -> Vec<AssignmentRef<'a>> {
+fn to_assignments(assigned : & HashMap<ObjectID, Color>) -> Vec<AssignmentRef> {
     assigned.into_iter().map(|(k, v)| {
         AssignmentRef{
             names : k,

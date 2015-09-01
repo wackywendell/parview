@@ -68,8 +68,8 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let palette : Palette = match args.flag_palette {
         None => Default::default(),
         Some(fname) => {
-            let path : &Path = Path::new(&fname[..]);
-            try!(misc::load_toml::<Palette>(path))
+            let palette_path : &Path = Path::new(&fname[..]);
+            try!(misc::load_toml::<Palette>(palette_path))
         }
     };
     
