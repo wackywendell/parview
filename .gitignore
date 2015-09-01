@@ -24,3 +24,5 @@ rusti.sh
 test*.json
 test*.json.gz
 default_palette.toml
+*.mpg
+.ipynb_checkpoints
