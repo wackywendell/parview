@@ -241,7 +241,7 @@ impl Object for Sphere {
     }
     
     fn update(&mut self, other: &Self, node: &mut SceneNode){
-        if (self.diameter - other.diameter).abs() < EPSILON {
+        if (self.diameter - other.diameter).abs() > EPSILON {
             self.diameter = other.diameter;
             node.set_local_scale(self.diameter, self.diameter, self.diameter);
         }
