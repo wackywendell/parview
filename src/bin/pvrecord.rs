@@ -27,7 +27,8 @@ use std::path::Path;
 use kiss3d_recording::Recorder;
 use glfw::{WindowEvent,Key};
 
-use parview::{misc,Palette,Color,Config,TomlConfig,Frame,Parviewer};
+use parview::{misc, Palette, Color, Config, TomlConfig, Frame, Parviewer, EPSILON};
+use std::f32::consts::PI;
 
 // Write the Docopt usage string.
 docopt!(Args derive Debug, "
@@ -95,6 +96,11 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let mut lastix = 0;
     
     viewer.run(|viewer, _| {
+        if toml_config.rotate.abs() > EPSILON {
+            let new_yaw = viewer.camera.yaw() + (toml_config.rotate * PI / 180.);
+            viewer.camera.set_yaw(new_yaw);
+        }
+        
         let ix = viewer.timer.get_index();
         if ix < lastix {
             viewer.window.close();

@@ -37,7 +37,7 @@ pub mod timer;
 pub mod parviewer;
 pub mod config;
 
-pub use objects::{ObjectTracker, ObjectID, Sphere, Frame};
+pub use objects::{ObjectTracker, ObjectID, Sphere, Frame, EPSILON};
 pub use palette::{Color, Palette};
 pub use timer::Timer;
 pub use parviewer::{Config, Parviewer};

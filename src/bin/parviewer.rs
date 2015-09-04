@@ -22,7 +22,8 @@ extern crate parview;
 
 use std::path::Path;
 
-use parview::{misc,Palette,Color,Config,TomlConfig,Frame,Parviewer};
+use parview::{misc, Palette, Color, Config, TomlConfig, Frame, Parviewer, EPSILON};
+use std::f32::consts::PI;
 
 // Write the Docopt usage string.
 docopt!(Args derive Debug, "
@@ -90,6 +91,12 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let text_color = Color(255, 255, 255);
     
     viewer.run(|viewer, _| {
+        if toml_config.rotate.abs() > EPSILON {
+            let new_yaw = viewer.camera.yaw() + (toml_config.rotate * PI / 180.);
+            viewer.camera.set_yaw(new_yaw);
+        }
+            
+        
         viewer.draw_frame_text(0., 0., text_color);
         
         let dt = viewer.timer.get_dt();

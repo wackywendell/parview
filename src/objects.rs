@@ -17,7 +17,8 @@ use na::{RotationTo, Rotation, Norm};
 
 use palette::Palette;
 
-const EPSILON : f32 = 1e-6;
+/// A minimal value that is close enough to 0 for visual purposes
+pub const EPSILON : f32 = 1e-6;
 
 /// The way to ID an object. This is basically a list of strings.
 ///
