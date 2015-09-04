@@ -25,7 +25,7 @@ extern crate parview;
 use std::path::Path;
 
 use kiss3d_recording::Recorder;
-use glfw::{WindowEvent,Key};
+use glfw::{WindowEvent, Key};
 
 use parview::{misc, Palette, Color, Config, TomlConfig, Frame, Parviewer, EPSILON};
 use std::f32::consts::PI;
@@ -38,10 +38,11 @@ Options:
     -h, --help              Help and usage
     -p, --palette FILE      Use palette file (toml file), instead of default.
     -c, --config FILE       Use config file (toml file), instead of default.
-    
+
 
 Arguments:
-    <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
+    <file>      json file representing the frames. json.gz also accepted, if
+                the extension is \".gz\".
 ",
 flag_palette : Option<String>,
 flag_config : Option<String>,
@@ -51,64 +52,64 @@ arg_moviefile : String,
 
 fn run() -> Result<(), Box<std::error::Error>> {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    let toml_config : TomlConfig = match args.flag_config {
+    let toml_config: TomlConfig = match args.flag_config {
         None => Default::default(),
         Some(ref fname) => {
-            let path : &Path = Path::new(&fname[..]);
+            let path: &Path = Path::new(&fname[..]);
             try!(misc::load_toml::<TomlConfig>(path))
         }
     };
-    
+
     let framerate = toml_config.framerate;
-    let config : Config = toml_config.to_parviewer_config();
-    
-    let fname : &str = &args.arg_particlefile;
-    let path : &Path = Path::new(fname);
-    
-    let frames : Vec<Frame> = try!(misc::deserialize_by_ext(path));
-    let palette : Palette = match args.flag_palette {
+    let config: Config = toml_config.to_parviewer_config();
+
+    let fname: &str = &args.arg_particlefile;
+    let path: &Path = Path::new(fname);
+
+    let frames: Vec<Frame> = try!(misc::deserialize_by_ext(path));
+    let palette: Palette = match args.flag_palette {
         None => Default::default(),
         Some(fname) => {
-            let palette_path : &Path = Path::new(&fname[..]);
+            let palette_path: &Path = Path::new(&fname[..]);
             try!(misc::load_toml::<Palette>(palette_path))
         }
     };
-    
+
     // println!("config: {:?}", config);
-    
+
     let mut viewer = try!(Parviewer::new(frames, palette, config));
     let _ = viewer.timer.at_least(toml_config.fps);
     // Record as fast as possible
     viewer.window.set_framerate_limit(None);
     let text_color = Color(255, 255, 255);
-    
-    let mut recorder = Recorder::new_with_params(
-        &args.arg_moviefile,
-        viewer.window.width()  as usize,
-        viewer.window.height() as usize,
-        None, // bit_rate
-        Some((1, framerate as usize)), //time base
-        None, None, None
-    );
+
+    let mut recorder = Recorder::new_with_params(&args.arg_moviefile,
+                                                 viewer.window.width()  as usize,
+                                                 viewer.window.height() as usize,
+                                                 None, // bit_rate
+                                                 Some((1, framerate as usize)), // time base
+                                                 None,
+                                                 None,
+                                                 None);
     println!("Sizes: {}, {}", viewer.window.width() as usize,
     viewer.window.height() as usize);
-    
+
     let mut lastix = 0;
-    
+
     viewer.run(|viewer, _| {
         if toml_config.rotate.abs() > EPSILON {
             let new_yaw = viewer.camera.yaw() + (toml_config.rotate * PI / 180.);
             viewer.camera.set_yaw(new_yaw);
         }
-        
+
         let ix = viewer.timer.get_index();
         if ix < lastix {
             viewer.window.close();
             return;
         };
-        
+
         lastix = ix;
-        
+
         for mut event in viewer.window.events().iter() {
             match event.value {
                 WindowEvent::Key(key, _, glfw::Action::Release, _) => {
@@ -131,16 +132,16 @@ fn run() -> Result<(), Box<std::error::Error>> {
                 _ => {}
             }
         }
-        
+
         viewer.draw_frame_text(0., 0., text_color);
         recorder.snap(&mut viewer.window);
-        
+
         let frames_per_tick = viewer.timer.get_dt() / framerate;
         let total = viewer.timer.total_loop_time().map(
             |n| format!("{}", (n / frames_per_tick + 0.5) as usize)
         ).unwrap_or("?".into());
-        
-        let title = format!("Parviewer ({} / {})", 
+
+        let title = format!("Parviewer ({} / {})",
             ((viewer.timer.get_time() / frames_per_tick) + 0.5) as usize,
             total
         );
@@ -154,7 +155,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
 pub fn main() {
     if let Err(err) = run() {
         println!("ERROR.");
-        
+
         misc::err_print(&*err);
     }
 }

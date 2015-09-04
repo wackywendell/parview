@@ -34,10 +34,11 @@ Options:
     -g, --generate          Generate test_frames.json
     -p, --palette FILE      Use palette file (toml file), instead of default.
     -c, --config FILE       Use config file (toml file), instead of default.
-    
+
 
 Arguments:
-    <file>      json file representing the frames. json.gz also accepted, if the extension is \".gz\".
+    <file>      json file representing the frames. json.gz also accepted,
+                if the extension is \".gz\".
 ",
 flag_palette : Option<String>,
 flag_config : Option<String>,
@@ -46,28 +47,28 @@ arg_file : Option<String>,
 
 fn run() -> Result<(), Box<std::error::Error>> {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    let toml_config : TomlConfig = match args.flag_config {
+    let toml_config: TomlConfig = match args.flag_config {
         None => Default::default(),
         Some(ref fname) => {
-            let path : &Path = Path::new(&fname[..]);
+            let path: &Path = Path::new(&fname[..]);
             try!(misc::load_toml::<TomlConfig>(path))
         }
     };
-    
-    let config : Config = toml_config.to_parviewer_config();
-    
-    let fname : &str = match args.arg_file {
+
+    let config: Config = toml_config.to_parviewer_config();
+
+    let fname: &str = match args.arg_file {
         Some(ref s) => s,
-        None => "test_frame.json"
+        None => "test_frame.json",
     };
-    let path : &Path = Path::new(fname);
-    
-    let (frames, palette) : (Vec<Frame>, Palette) = if args.flag_generate {
+    let path: &Path = Path::new(fname);
+
+    let (frames, palette): (Vec<Frame>, Palette) = if args.flag_generate {
         let frames = try!(misc::generate_frame(path));
         let palette = match args.flag_palette {
             None => Default::default(),
             Some(fname) => {
-                let palette_path : &Path = Path::new(&fname[..]);
+                let palette_path: &Path = Path::new(&fname[..]);
                 try!(misc::generate_palette(palette_path))
             }
         };
@@ -77,28 +78,27 @@ fn run() -> Result<(), Box<std::error::Error>> {
         let palette = match args.flag_palette {
             None => Default::default(),
             Some(fname) => {
-                let palette_path : &Path = Path::new(&fname[..]);
+                let palette_path: &Path = Path::new(&fname[..]);
                 try!(misc::load_toml::<Palette>(palette_path))
             }
         };
         (frames, palette)
     };
-    
+
     // println!("config: {:?}", config);
-    
+
     let mut viewer = try!(Parviewer::new(frames, palette, config));
     let _ = viewer.timer.at_least(toml_config.fps);
     let text_color = Color(255, 255, 255);
-    
+
     viewer.run(|viewer, _| {
         if toml_config.rotate.abs() > EPSILON {
             let new_yaw = viewer.camera.yaw() + (toml_config.rotate * PI / 180.);
             viewer.camera.set_yaw(new_yaw);
         }
-            
-        
+
         viewer.draw_frame_text(0., 0., text_color);
-        
+
         let dt = viewer.timer.get_dt();
         let dt_text = if dt >= 0.6 || dt.abs() < 1e-6  || dt <= -0.6 {
             format!("{}", dt)
@@ -107,14 +107,14 @@ fn run() -> Result<(), Box<std::error::Error>> {
         } else {
             format!("-1/{}", -1./dt)
         };
-        
+
         let text = format!(
-            "t:{:6.2}, dt:{}, coloring: {}", 
+            "t:{:6.2}, dt:{}, coloring: {}",
             viewer.timer.get_time(),
             dt_text,
             viewer.palette.partials_string()
         );
-        
+
         viewer.draw_text(&*text, 0., 1., text_color);
     });
     Ok(())
@@ -124,7 +124,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
 pub fn main() {
     if let Err(err) = run() {
         println!("ERROR.");
-        
+
         misc::err_print(&*err);
     }
 }
