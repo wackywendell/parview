@@ -140,7 +140,7 @@ pub fn load_toml<T: Decodable>(path : &Path) -> Result<T, Box<Error>> {
         Some(v) => v,
         None => {
             // We can unwrap here, becase parser.parse() == None means there were errors
-            let err : Box<Error> = parser.errors.pop().unwrap().into();
+            let err : Box<Error> = parser.errors.pop().expect("Toml parser failed, yet provided no error. Unsure how to proceed.").into();
             return Err(err)
         }
     };
