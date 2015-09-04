@@ -1,6 +1,6 @@
 [root]
 name = "parview"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "docopt 0.6.72 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt_macros 0.6.72 (registry+https://github.com/rust-lang/crates.io-index)",
