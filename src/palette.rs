@@ -198,7 +198,7 @@ fn to_assignments(assigned: &HashMap<ObjectID, Color>) -> Vec<AssignmentRef> {
 /// A reference to a palette, with minimal data, for serialization purposes
 #[derive(Serialize, RustcEncodable, Clone)]
 pub struct PaletteRef<'a> {
-    defaults: &'a Vec<Color>,
+    default_colors: &'a Vec<Color>,
     partials: &'a PartialIDer,
     assigned: Vec<AssignmentRef<'a>>,
 }
@@ -206,7 +206,7 @@ pub struct PaletteRef<'a> {
 impl<'a> From<&'a Palette> for PaletteRef<'a> {
     fn from(palette: &'a Palette) -> Self {
         PaletteRef {
-            defaults: &palette.default_colors,
+            default_colors: &palette.default_colors,
             partials: &palette.partials,
             assigned: to_assignments(&palette.assigned),
         }
@@ -226,22 +226,24 @@ fn from_assignments(assigned: Vec<Assignment>) -> HashMap<ObjectID, Color> {
 }
 
 
-/// A reference to a palette, with minimal data
+/// A palette with all fields optional, for deserializing a config.
 #[derive(Deserialize, RustcDecodable, Clone)]
-pub struct PaletteBasic {
-    defaults: Vec<Color>,
-    partials: PartialIDer,
+struct PaletteOpt {
+    default_colors: Option<Vec<Color>>,
+    partials: Option<PartialIDer>,
     assigned: Option<Vec<Assignment>>,
     next_color: Option<usize>,
 }
 
-impl From<PaletteBasic> for Palette {
-    fn from(p: PaletteBasic) -> Self {
+impl PaletteOpt {
+    fn into_palette(self) -> Palette {
+        let default_palette = Palette::default();
+        
         Palette {
-            default_colors: p.defaults,
-            partials: p.partials,
-            assigned: p.assigned.map(from_assignments).unwrap_or_default(),
-            next_color: p.next_color.unwrap_or(0),
+            default_colors: self.default_colors.unwrap_or(default_palette.default_colors),
+            partials: self.partials.unwrap_or(default_palette.partials),
+            assigned: self.assigned.map(from_assignments).unwrap_or(default_palette.assigned),
+            next_color: self.next_color.unwrap_or(default_palette.next_color),
         }
     }
 }
@@ -286,8 +288,8 @@ impl serde::Serialize for Palette {
 
 impl serde::Deserialize for Palette {
     fn deserialize<D: serde::Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
-        let p = try!(PaletteBasic::deserialize(deserializer));
-        Ok(Palette::from(p))
+        let p = try!(PaletteOpt::deserialize(deserializer));
+        Ok(p.into_palette())
     }
 }
 
@@ -299,8 +301,8 @@ impl rustc_serialize::Encodable for Palette {
 
 impl rustc_serialize::Decodable for Palette {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        let p = try!(PaletteBasic::decode(d));
-        Ok(Palette::from(p))
+        let p = try!(PaletteOpt::decode(d));
+        Ok(p.into_palette())
     }
 }
 
@@ -310,6 +312,13 @@ fn palette_toml_round_trip() {
 
     let s = toml::encode_str(&p);
     let p2 = toml::decode_str(&*s).unwrap();
+    assert_eq!(p, p2);
+}
+
+#[test]
+fn palette_toml_empty_string() {
+    let p = Palette::default();
+    let p2 = toml::decode_str("").unwrap();
     assert_eq!(p, p2);
 }
 
