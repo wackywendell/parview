@@ -224,6 +224,16 @@ impl Parviewer {
                             self.camera.set_pitch(PI/2.);
                             self.camera.set_yaw(0.);
                         }
+                        Key::S => {
+                            // TODO: savefile format should be a config option
+                            let fname = format!("frame{:04}.png", self.timer.get_index());
+                            let path = std::path::Path::new(&fname);
+                            let img = self.window.snap_image();
+                            match img.save(path) {
+                                Ok(()) => println!("Saved image to {}", fname),
+                                Err(res) => println!("Error saving: {}", res),
+                            };
+                        }
                         Key::W => {
                             println!("yaw: {:6.2}, pitch: {:6.2}, distance: {:6.2}",
                                 self.camera.yaw() * 180. / PI,

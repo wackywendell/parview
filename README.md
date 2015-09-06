@@ -52,6 +52,7 @@ The binary `parviewer` is for simple viewing; it will show you the particle traj
 | Space       | Pause playback |
 | Comma, `,`  | Slow down playback |
 | Period, `,` | Speed up playback  |
+| S           | Save image (filename will be `frame0001.png` for frame 1) |
 | F           | Reverse playback direction |
 | Up          | Rotate the cube to a 45° angle, 30° from the plane |
 | Down        | Rotate the cube to look directly along the z-axis |
