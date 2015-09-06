@@ -2,6 +2,8 @@
 use parviewer::Config;
 use serde;
 use rustc_serialize;
+
+#[cfg(test)]
 use toml;
 
 /// Configuration to be loaded from the TOML file
