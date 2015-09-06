@@ -7,7 +7,7 @@ use rustc_serialize;
 use toml;
 
 /// Configuration to be loaded from the TOML file
-/// TomlConfig is deserialized by first deserializing one of these, and then 
+/// TomlConfig is deserialized by first deserializing one of these, and then
 /// filling in with defaults
 #[derive(RustcDecodable)]
 #[derive(Deserialize)]
@@ -79,22 +79,22 @@ impl rustc_serialize::Decodable for TomlConfig {
 }
 
 impl TomlConfig {
-    fn from(tco : TomlConfigOpt) -> Self {
+    fn from(tco: TomlConfigOpt) -> Self {
         let default_opts = Self::default();
         TomlConfig {
-            pitch : tco.pitch.unwrap_or(default_opts.pitch),
-            yaw : tco.yaw.unwrap_or(default_opts.yaw),
-            fov : tco.fov.unwrap_or(default_opts.fov),
-            distance : tco.distance.unwrap_or(default_opts.distance),
-            width : tco.width.unwrap_or(default_opts.width),
-            height : tco.height,
-            pauseloop : tco.pauseloop,
-            rotate : tco.rotate.unwrap_or(default_opts.rotate),
-            fps : tco.fps.unwrap_or(default_opts.fps),
-            framerate : tco.framerate.unwrap_or(default_opts.framerate)
+            pitch: tco.pitch.unwrap_or(default_opts.pitch),
+            yaw: tco.yaw.unwrap_or(default_opts.yaw),
+            fov: tco.fov.unwrap_or(default_opts.fov),
+            distance: tco.distance.unwrap_or(default_opts.distance),
+            width: tco.width.unwrap_or(default_opts.width),
+            height: tco.height,
+            pauseloop: tco.pauseloop,
+            rotate: tco.rotate.unwrap_or(default_opts.rotate),
+            fps: tco.fps.unwrap_or(default_opts.fps),
+            framerate: tco.framerate.unwrap_or(default_opts.framerate),
         }
     }
-    
+
     /// Convert to `parviewer::config` instance
     pub fn to_parviewer_config(&self) -> Config {
         Config {
@@ -114,7 +114,7 @@ impl TomlConfig {
 
 #[test]
 fn config_toml_empty_string() {
-    let c : TomlConfig = TomlConfig::default();
-    let c2 : TomlConfig = toml::decode_str("").unwrap();
+    let c: TomlConfig = TomlConfig::default();
+    let c2: TomlConfig = toml::decode_str("").unwrap();
     assert_eq!(c, c2);
 }

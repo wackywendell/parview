@@ -34,7 +34,7 @@ pub fn inconsolata(size: i32) -> std::rc::Rc<kiss3d::text::Font> {
 }
 
 /// Deserialize a function from a `.json` or `.json.gz` file
-pub fn deserialize_by_ext<T: serde::Deserialize>(path: &Path) -> Result<T, serde_json::error::Error> {
+pub fn deserialize_by_ext<T: serde::Deserialize>(path: &Path) -> Result<T, serde_json::Error> {
     let mut buf: io::BufReader<File> = io::BufReader::new(try!(File::open(path)));
     // let f = try!(File::open(path));
 

@@ -238,7 +238,7 @@ struct PaletteOpt {
 impl PaletteOpt {
     fn into_palette(self) -> Palette {
         let default_palette = Palette::default();
-        
+
         Palette {
             default_colors: self.default_colors.unwrap_or(default_palette.default_colors),
             partials: self.partials.unwrap_or(default_palette.partials),
