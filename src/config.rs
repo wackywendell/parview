@@ -68,13 +68,13 @@ impl Default for TomlConfig {
 
 impl serde::Deserialize for TomlConfig {
     fn deserialize<D: serde::Deserializer>(d: &mut D) -> Result<Self, D::Error> {
-        TomlConfigOpt::deserialize(d).map(|tco| Self::from(tco))
+        TomlConfigOpt::deserialize(d).map(Self::from)
     }
 }
 
 impl rustc_serialize::Decodable for TomlConfig {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        TomlConfigOpt::decode(d).map(|tco| Self::from(tco))
+        TomlConfigOpt::decode(d).map(Self::from)
     }
 }
 
