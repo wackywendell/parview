@@ -250,7 +250,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "kiss3d"
 version = "0.1.2"
-source = "git+https://github.com/sebcrozet/kiss3d#076e96953fb7aff32b409e1673fc7d47d0b9fb4f"
+source = "git+https://github.com/sebcrozet/kiss3d#ec9e3439e7cffd4d12a5843e4ec75ab874b01df6"
 dependencies = [
  "freetype-rs 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gl 0.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
