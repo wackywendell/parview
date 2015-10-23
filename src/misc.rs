@@ -72,7 +72,7 @@ pub fn generate_frame(path: &Path) -> Result<Vec<objects::Frame>, serde_json::er
 
     let mut framevec: Vec<objects::Frame> = vec!();
 
-    for i in (0usize..40usize) {
+    for i in 0usize..40usize {
         let mut f2 = objects::Frame {
             spheres: f.spheres.iter().enumerate().map(|(n, ref s)| {
                     let mut newr = s.diameter;
