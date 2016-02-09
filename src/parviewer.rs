@@ -39,6 +39,8 @@ pub struct Config {
     pub pauseloop: Option<f32>,
     /// framerate limit
     pub framerate: f32,
+    /// Show Box
+    pub showbox: bool,
 }
 
 /// Open a `json` or `json.gz` file, and deserialize it into a `Vec<Frame>`
@@ -46,11 +48,11 @@ pub fn open_file(path: &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
     let mut buf: std::io::BufReader<File> = std::io::BufReader::new(try!(File::open(path)));
     // let f = try!(File::open(path));
 
-    //~ let coded = json::from_reader(&mut buf).unwrap();
-    //~ let mut decoder =json::Decoder::new(coded);
-    //~ let frames: Vec<Frame> = Decodable::decode(&mut decoder).unwrap();
+    // ~ let coded = json::from_reader(&mut buf).unwrap();
+    // ~ let mut decoder =json::Decoder::new(coded);
+    // ~ let frames: Vec<Frame> = Decodable::decode(&mut decoder).unwrap();
 
-    let ext: Option<&str> = path.extension().and_then(|s| {s.to_str()});
+    let ext: Option<&str> = path.extension().and_then(|s| s.to_str());
 
     if ext == Some("gz") {
         println!("gz ext!");
@@ -60,10 +62,8 @@ pub fn open_file(path: &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
         Some("gz") => {
             let mut gzbuf = try!(GzDecoder::new(buf));
             serde_json::de::from_reader(&mut gzbuf)
-        },
-        _ => {
-            serde_json::de::from_reader(&mut buf)
-            }
+        }
+        _ => serde_json::de::from_reader(&mut buf),
     });
 
     Ok(coded)
@@ -101,7 +101,9 @@ impl Parviewer {
         let height: u32 = config.height;
         let mut window = Window::new_with_size(&*title, width, height);
         // TODO: cube configuration
-        let _ = misc::draw_cube(&mut window);
+        if config.showbox {
+            let _ = misc::draw_cube(&mut window);
+        }
 
         let eye = na::Pnt3::new(0.0f32, 0.0, config.distance);
         let at = na::orig();
@@ -114,7 +116,7 @@ impl Parviewer {
         arc_ball.set_yaw(config.yaw * PI / 180.);
         arc_ball.set_pitch(config.pitch * PI / 180.);
 
-        //window.set_background_color(1.0, 1.0, 1.0);
+        // window.set_background_color(1.0, 1.0, 1.0);
         window.set_light(kiss3d::light::Light::StickToCamera);
         window.set_framerate_limit(Some(config.framerate as u64));
 
@@ -133,7 +135,7 @@ impl Parviewer {
 
         // TODO: config?
         let dts_first = vec![1., 2., 3., 4., 6., 8., 12., 16., 24., 32., 48., 64., 96., 128.];
-        let mut dts = dts_first.iter().rev().map(|n|{1./n}).collect::<Vec<f32>>();
+        let mut dts = dts_first.iter().rev().map(|n| 1. / n).collect::<Vec<f32>>();
         dts.extend(dts_first);
         dts.dedup();
 
@@ -217,17 +219,17 @@ impl Parviewer {
                             self.timer.switch_direction();
                         }
                         Key::Up => {
-                            self.camera.set_pitch(PI/3.);
-                            self.camera.set_yaw(PI/4.);
+                            self.camera.set_pitch(PI / 3.);
+                            self.camera.set_yaw(PI / 4.);
                         }
                         Key::Down => {
-                            self.camera.set_pitch(PI/2.);
+                            self.camera.set_pitch(PI / 2.);
                             self.camera.set_yaw(0.);
                         }
                         Key::S => {
                             // TODO: savefile format should be a config option
                             let fname = format!("frame{:04}.png", self.timer.get_index());
-                            let path = std::path::Path::new(&fname);
+                            let path = Path::new(&fname);
                             let img = self.window.snap_image();
                             match img.save(path) {
                                 Ok(()) => println!("Saved image to {}", fname),
@@ -236,10 +238,9 @@ impl Parviewer {
                         }
                         Key::W => {
                             println!("yaw: {:6.2}, pitch: {:6.2}, distance: {:6.2}",
-                                self.camera.yaw() * 180. / PI,
-                                self.camera.pitch() * 180. / PI,
-                                self.camera.dist()
-                            );
+                                     self.camera.yaw() * 180. / PI,
+                                     self.camera.pitch() * 180. / PI,
+                                     self.camera.dist());
                         }
                         Key::Space => {
                             self.paused = !self.paused;
@@ -314,6 +315,6 @@ impl Parviewer {
             update(self, new_index);
 
             self.handle_events();
-        };
+        }
     }
 }

@@ -22,6 +22,7 @@ struct TomlConfigOpt {
     pub rotate: Option<f32>,
     pub framerate: Option<f32>,
     pub fps: Option<f32>,
+    pub showbox: Option<bool>,
 }
 
 /// Configuration to be loaded from the TOML file
@@ -47,6 +48,8 @@ pub struct TomlConfig {
     pub framerate: f32,
     /// Rate of drawing frames. [default: 2.0]
     pub fps: f32,
+    /// Show the box
+    pub showbox: bool,
 }
 
 impl Default for TomlConfig {
@@ -62,6 +65,7 @@ impl Default for TomlConfig {
             rotate: 0.0,
             fps: 2.0,
             framerate: 24.0,
+            showbox: true,
         }
     }
 }
@@ -92,6 +96,7 @@ impl TomlConfig {
             rotate: tco.rotate.unwrap_or(default_opts.rotate),
             fps: tco.fps.unwrap_or(default_opts.fps),
             framerate: tco.framerate.unwrap_or(default_opts.framerate),
+            showbox: tco.showbox.unwrap_or(default_opts.showbox),
         }
     }
 
@@ -106,6 +111,7 @@ impl TomlConfig {
             distance: self.distance,
             pauseloop: self.pauseloop,
             framerate: self.framerate,
+            showbox: self.showbox,
         }
     }
 }

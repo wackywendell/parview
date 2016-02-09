@@ -1,6 +1,5 @@
-/*!
-# ParView
-*/
+//! # ParView
+//!
 
 #![feature(plugin)]
 #![feature(custom_derive)]
@@ -80,19 +79,20 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let mut viewer = try!(Parviewer::new(frames, palette, config));
     let _ = viewer.timer.at_least(toml_config.fps);
     // Record as fast as possible
-    viewer.window.set_framerate_limit(None);
+    viewer.window.set_framerate_limit(Some(framerate as u64));
     let text_color = Color(255, 255, 255);
 
     let mut recorder = Recorder::new_with_params(&args.arg_moviefile,
-                                                 viewer.window.width()  as usize,
+                                                 viewer.window.width() as usize,
                                                  viewer.window.height() as usize,
                                                  None, // bit_rate
                                                  Some((1, framerate as usize)), // time base
                                                  None,
                                                  None,
                                                  None);
-    println!("Sizes: {}, {}", viewer.window.width() as usize,
-    viewer.window.height() as usize);
+    println!("Sizes: {}, {}",
+             viewer.window.width() as usize,
+             viewer.window.height() as usize);
 
     let mut lastix = 0;
 
@@ -119,16 +119,16 @@ fn run() -> Result<(), Box<std::error::Error>> {
                         Key::Q => {
                             viewer.window.close();
                             return;
-                        },
+                        }
                         _ => {}
                     }
                     // ignore all other keys
                     event.inhibited = inhibit;
-                },
+                }
                 glfw::WindowEvent::CursorPos(_, _) => {
                     // ignore drag events
                     event.inhibited = true;
-                },
+                }
                 _ => {}
             }
         }
@@ -137,14 +137,14 @@ fn run() -> Result<(), Box<std::error::Error>> {
         recorder.snap(&mut viewer.window);
 
         let frames_per_tick = viewer.timer.get_dt() / framerate;
-        let total = viewer.timer.total_loop_time().map(
-            |n| format!("{}", (n / frames_per_tick + 0.5) as usize)
-        ).unwrap_or("?".into());
+        let total = viewer.timer
+                          .total_loop_time()
+                          .map(|n| format!("{}", (n / frames_per_tick + 0.5) as usize))
+                          .unwrap_or("?".into());
 
         let title = format!("Parviewer ({} / {})",
-            ((viewer.timer.get_time() / frames_per_tick) + 0.5) as usize,
-            total
-        );
+                            ((viewer.timer.get_time() / frames_per_tick) + 0.5) as usize,
+                            total);
         viewer.window.set_title(&title);
         // println!("{}", title);
     });
