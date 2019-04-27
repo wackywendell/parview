@@ -5,11 +5,10 @@ use std;
 use serde_json;
 use na;
 use kiss3d;
-use glfw;
 
 use flate2::read::GzDecoder;
 use kiss3d::window::Window;
-use glfw::{WindowEvent, Key};
+use kiss3d::Event::{WindowEvent, Key};
 
 use std::path::Path;
 use std::fs::File;

@@ -10,17 +10,10 @@
 #![deny(missing_docs)]
 #![deny(unused_results)]
 
-// Needed for #[derive(Deserialize)], etc.
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
-
 extern crate serde;
-extern crate rustc_serialize; // for docopt, toml
-extern crate serde_json;
 extern crate rand;
 extern crate flate2;
 extern crate toml;
-extern crate glfw;
 
 extern crate nalgebra as na;
 extern crate kiss3d;

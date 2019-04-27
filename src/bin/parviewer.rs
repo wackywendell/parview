@@ -1,13 +1,6 @@
 /*!
 # ParView
 */
-
-#![feature(plugin)]
-#![feature(custom_derive)]
-#![plugin(docopt_macros)]
-
-#![feature(concat_idents)]
-
 #![deny(non_camel_case_types)]
 #![deny(unused_parens)]
 #![deny(non_upper_case_globals)]
@@ -15,14 +8,11 @@
 #![deny(missing_docs)]
 #![deny(unused_results)]
 
-extern crate rustc_serialize;
 extern crate docopt;
-
-extern crate parview;
 
 use std::path::Path;
 
-use parview::{misc, Palette, Color, Config, TomlConfig, Frame, Parviewer, EPSILON};
+use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILON};
 use std::f32::consts::PI;
 
 // Write the Docopt usage string.
@@ -100,12 +90,12 @@ fn run() -> Result<(), Box<std::error::Error>> {
         viewer.draw_frame_text(0., 0., text_color);
 
         let dt = viewer.timer.get_dt();
-        let dt_text = if dt >= 0.6 || dt.abs() < 1e-6  || dt <= -0.6 {
+        let dt_text = if dt >= 0.6 || dt.abs() < 1e-6 || dt <= -0.6 {
             format!("{}", dt)
         } else if dt > 0. {
-            format!("1/{}", 1./dt)
+            format!("1/{}", 1. / dt)
         } else {
-            format!("-1/{}", -1./dt)
+            format!("-1/{}", -1. / dt)
         };
 
         let text = format!(
