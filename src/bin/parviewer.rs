@@ -40,12 +40,13 @@ Arguments:
 struct Args {
     flag_palette: Option<String>,
     flag_config: Option<String>,
+    flag_generate: bool,
     arg_file: Option<String>,
 }
 
 fn run() -> Result<(), Box<std::error::Error>> {
     let args: Args = Docopt::new(USAGE)
-        .and_then(|dopt| dopt.parse())
+        .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
     let toml_config: TomlConfig = match args.flag_config {
         None => Default::default(),
