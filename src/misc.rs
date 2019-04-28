@@ -24,12 +24,6 @@ pub fn rand_vec() -> na::Vector3<f32> {
     na::Vector3::new(random::<f32>(), random(), random()) - na::Vector3::new(0.5f32, 0.5f32, 0.5f32)
 }
 
-/// Inconsolata font
-pub fn inconsolata() -> std::rc::Rc<kiss3d::text::Font> {
-    let inconsolata_otf: &[u8] = include_bytes!("Inconsolata.otf");
-    kiss3d::text::Font::from_bytes(inconsolata_otf).unwrap()
-}
-
 /// Deserialize a function from a `.json` or `.json.gz` file
 pub fn deserialize_by_ext<T>(path: &Path) -> Result<T, Box<Error>>
 where

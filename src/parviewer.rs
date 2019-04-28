@@ -148,7 +148,7 @@ impl Parviewer {
         timer.loop_pause = config.pauseloop;
         timer.fps = config.framerate;
 
-        let font = misc::inconsolata();
+        let font = kiss3d::text::Font::default();
 
         Ok(Parviewer {
             config: config,
@@ -180,7 +180,7 @@ impl Parviewer {
 
         let max_width = self.window.width() * 2;
         // TODO: Figure out why the bottom is window.height() * 2.
-        let max_height = self.window.height() * 2 - font_size / 2; // TOD: Used to be - (self.font.height() as f32);
+        let max_height = self.window.height() * 2 - font_size; // TODO: Used to be - (self.font.height() as f32);
         let text_loc = na::Point2::new(x * max_width as f32, y * max_height as f32);
         let text_color = color.to_point3();
         let font_size = 48; // TODO draw_text takes a "scale", is using the font_size correct?
@@ -188,7 +188,7 @@ impl Parviewer {
             .draw_text(t, &text_loc, font_size as f32, &self.font, &text_color);
     }
 
-    /// Draw some text in the window, with coordinates in the window frame (i.e., 0 to 1).
+    /// Draw the text from the frame in the window, with coordinates in the window frame (i.e., 0 to 1).
     pub fn draw_frame_text(&mut self, x: f32, y: f32, color: Color) {
         let font_size = 48; // TODO draw_text takes a "scale", is using the font_size correct?
 
