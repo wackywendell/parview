@@ -216,18 +216,18 @@ fn to_assignments(assigned: &HashMap<ObjectID, Color>) -> Vec<AssignmentRef> {
 /// A reference to a palette, with minimal data, for serialization purposes
 #[derive(Serialize, Debug, Clone)]
 pub struct PaletteRef<'a> {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    defaults: &'a Vec<Color>,
     #[serde(skip_serializing_if = "PartialIDer::is_empty")]
     partials: &'a PartialIDer,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assigned: Vec<AssignmentRef<'a>>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    default_colors: &'a Vec<Color>,
 }
 
 impl<'a> From<&'a Palette> for PaletteRef<'a> {
     fn from(palette: &'a Palette) -> Self {
         PaletteRef {
-            default_colors: &palette.default_colors,
+            defaults: &palette.default_colors,
             partials: &palette.partials,
             assigned: to_assignments(&palette.assigned),
         }
@@ -303,31 +303,9 @@ impl<'de> Deserialize<'de> for Palette {
 
 #[test]
 fn palette_toml_round_trip() -> Result<(), Box<std::error::Error>> {
-    let mut p = Palette::default();
-    let _ = p
-        .assigned
-        .insert(ObjectID(vec!["abc".into()]), Color(1, 2, 3));
-
-    println!("default: {:#?}", p);
-    let mut pr = PaletteRef::from(&p);
-    println!("pr: {:#?}", pr);
-
-    let ra = toml::to_string(&pr.assigned);
-    println!("ra returned: {:#?}", ra);
-    let dc = toml::to_string(&pr.default_colors);
-    println!("dc returned: {:#?}", dc);
-    let partials = toml::to_string(&pr.partials);
-    println!("partials returned: {:#?}", partials);
-
-    let rpr = toml::to_string(&pr);
-    println!("rpr returned: {:#?}", rpr);
-
-    let r = toml::to_string(&p);
-    println!("returned: {:#?}", r);
-    let s = r?;
-    println!("to_string: {}", s);
+    let p = Palette::default();
+    let s = toml::to_string(&p)?;
     let p2 = toml::from_str(&*s)?;
-    println!("from_str: {:#?}", p2);
     assert_eq!(p, p2);
     Ok(())
 }
