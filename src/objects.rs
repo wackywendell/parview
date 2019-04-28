@@ -2,23 +2,20 @@
 
 extern crate nalgebra as na;
 extern crate serde;
-extern crate rustc_serialize;
 
-//use rustc_serialize::json::{self, Json, ToJson};
-use serde::{Serialize, Serializer, Deserialize, Deserializer, Error};
 use kiss3d::scene::SceneNode;
 use kiss3d::window::Window;
-use std::collections::{HashSet, HashMap};
-use std::collections::hash_map::Entry;
-use std::iter::FromIterator;
-use std::convert::From;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use na::{RotationTo, Rotation, Norm};
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
+use std::convert::From;
+use std::iter::FromIterator;
 
 use palette::Palette;
 
 /// A minimal value that is close enough to 0 for visual purposes
-pub const EPSILON : f32 = 1e-6;
+pub const EPSILON: f32 = 1e-6;
 
 /// The way to ID an object. This is basically a list of strings.
 ///
@@ -26,39 +23,31 @@ pub const EPSILON : f32 = 1e-6;
 /// For example, a protein might have levels:
 /// ResidueName → ResidueNumber → Element → AtomName
 /// Each must be unique.
-#[derive(Debug,Eq,PartialEq,Ord,PartialOrd,Hash,Clone)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub struct ObjectID(pub Vec<String>);
 
 impl Serialize for ObjectID {
-    fn serialize<S: Serializer>(&self, s: &mut S) -> Result<(), S::Error> {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         let &ObjectID(ref names) = self;
         names.serialize(s)
     }
 }
 
-impl rustc_serialize::Encodable for ObjectID {
-    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        let &ObjectID(ref names) = self;
-        names.encode(s)
-    }
-}
-
-impl Deserialize for ObjectID {
-    fn deserialize<D: Deserializer>(d: &mut D) -> Result<Self, D::Error> {
+impl<'de> Deserialize<'de> for ObjectID {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         Vec::deserialize(d).map(ObjectID)
     }
 }
 
-impl rustc_serialize::Decodable for ObjectID {
-    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Vec::decode(d).map(ObjectID)
-    }
-}
-
-impl ObjectID{
+impl ObjectID {
     /// Create a new `ObjectTracker` associated with a given `Window`.
     pub fn new(names: Vec<String>) -> ObjectID {
         ObjectID(names)
+    }
+
+    /// Returns true if there are no IDs.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
@@ -84,8 +73,8 @@ pub struct Frame {
     pub text: String,
 }
 
-impl Deserialize for Frame {
-    fn deserialize<D: Deserializer>(d: &mut D) -> Result<Self, D::Error> {
+impl<'de> Deserialize<'de> for Frame {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let minim = try!(MinimalFrame::deserialize(d));
         Ok(Frame {
             spheres: minim.spheres.unwrap_or(vec![]),
@@ -99,7 +88,7 @@ impl Deserialize for Frame {
 ///
 /// This is the trait-based interface so that Parview can manage it.
 /// See Sphere, etc. for objects to implement.
-pub trait Object : Clone {
+pub trait Object: Clone {
     /// The ID of an object. Must be unique.
     fn id(&self) -> &ObjectID;
     /// Create a new node for this object.
@@ -136,15 +125,11 @@ impl Object for ObjectEnum {
     fn update(&mut self, other: &Self, nodes: &mut SceneNode) {
         match (self, other) {
             (&mut ObjectEnum::Sphere(ref mut s), &ObjectEnum::Sphere(ref o)) => s.update(o, nodes),
-            (&mut ObjectEnum::Sphere(_), _) => {
-                unimplemented!()
-            }
+            (&mut ObjectEnum::Sphere(_), _) => unimplemented!(),
             (&mut ObjectEnum::Spherocylinder(ref mut s), &ObjectEnum::Spherocylinder(ref o)) => {
                 s.update(o, nodes)
             }
-            (&mut ObjectEnum::Spherocylinder(_), _) => {
-                unimplemented!()
-            }
+            (&mut ObjectEnum::Spherocylinder(_), _) => unimplemented!(),
         }
     }
 }
@@ -172,18 +157,29 @@ impl From<Spherocylinder> for ObjectEnum {
 impl ObjectTracker {
     /// Create a new `ObjectTracker` associated with a given `Window`.
     pub fn new(window: &mut Window) -> ObjectTracker {
-        ObjectTracker { objects: HashMap::new(), parent: window.add_group() }
+        ObjectTracker {
+            objects: HashMap::new(),
+            parent: window.add_group(),
+        }
     }
 
     /// The meat of `ObjectTracker`. Update old objects and the scene to match
     /// new objects
     pub fn update(&mut self, frame: &Frame, palette: &mut Palette) {
         // TODO: this used to be &ObjectID, which is probably faster
-        let mut seen: HashSet<ObjectID> = FromIterator::from_iter(self.objects.keys()
-            .map(|ref k|{(*k).clone()}));
+        let mut seen: HashSet<ObjectID> =
+            FromIterator::from_iter(self.objects.keys().map(|ref k| (*k).clone()));
 
-        let iter = frame.spheres.iter().map(|s| ObjectEnum::Sphere(s.clone()))
-            .chain(frame.spherocylinders.iter().map(|s| ObjectEnum::Spherocylinder(s.clone())));
+        let iter = frame
+            .spheres
+            .iter()
+            .map(|s| ObjectEnum::Sphere(s.clone()))
+            .chain(
+                frame
+                    .spherocylinders
+                    .iter()
+                    .map(|s| ObjectEnum::Spherocylinder(s.clone())),
+            );
 
         for new_object in iter {
             let name: &ObjectID = new_object.id();
@@ -196,7 +192,7 @@ impl ObjectTracker {
                     // if is_invisible {
                     //     self.parent.add_child(node);
                     // }
-                    seen.remove(name);
+                    let _ = seen.remove(name);
                 }
                 Entry::Vacant(v) => {
                     let mut node = new_object.new_node(&mut self.parent);
@@ -227,10 +223,10 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    /// get the location as a Vec3
-    pub fn x(&self) -> na::Vec3<f32> {
-        let (x,y,z) = self.loc;
-        na::Vec3::new(x, y, z)
+    /// get the location as a Vector3
+    pub fn x(&self) -> na::Vector3<f32> {
+        let (x, y, z) = self.loc;
+        na::Vector3::new(x, y, z)
     }
 }
 
@@ -241,7 +237,7 @@ impl Object for Sphere {
 
     fn new_node(&self, parent: &mut SceneNode) -> SceneNode {
         let mut node = parent.add_sphere(self.diameter / 2.0);
-        node.set_local_translation(self.x());
+        node.set_local_translation(self.x().into());
 
         node
     }
@@ -254,7 +250,7 @@ impl Object for Sphere {
 
         if self.loc != other.loc {
             self.loc = other.loc;
-            node.set_local_translation(self.x());
+            node.set_local_translation(self.x().into());
         }
     }
 }
@@ -273,16 +269,16 @@ pub struct Spherocylinder {
 }
 
 impl Spherocylinder {
-    /// get the location as a Vec3
-    pub fn x(&self) -> na::Vec3<f32> {
-        let (x,y,z) = self.loc;
-        na::Vec3::new(x, y, z)
+    /// get the location as a Vector3
+    pub fn x(&self) -> na::Vector3<f32> {
+        let (x, y, z) = self.loc;
+        na::Vector3::new(x, y, z)
     }
 
-    /// get the axis as a Vec3
-    pub fn get_axis(&self) -> na::Vec3<f32> {
-        let (x,y,z) = self.axis;
-        na::Vec3::new(x, y, z)
+    /// get the axis as a Vector3
+    pub fn get_axis(&self) -> na::Vector3<f32> {
+        let (x, y, z) = self.axis;
+        na::Vector3::new(x, y, z)
     }
 }
 
@@ -298,13 +294,13 @@ impl Object for Spherocylinder {
         // Then we scale by diam.
         let mut node = parent.add_capsule(0.5, h / diam);
         node.set_local_scale(diam, diam, diam);
-        node.set_local_translation(self.x());
+        node.set_local_translation(self.x().into());
 
-        let y = na::Vec3::new(0., 1., 0.);
-        let rot = y.rotation_to(&self.get_axis()).rotation();
+        let y = na::Vector3::new(0., 1., 0.);
+        let rot = na::Rotation3::rotation_between(&y, &self.get_axis()).unwrap();
         // println!("new: {:?}", self.names);
         // println!("ax: {:?}, rot: {:?}", self.get_axis(), rot);
-        node.set_local_rotation(rot);
+        node.set_local_rotation(rot.into());
 
         node
     }
@@ -316,11 +312,12 @@ impl Object for Spherocylinder {
         let length_change = ((l_new - l) / l).abs();
         let axis_change = (other.get_axis() - self.get_axis()).norm() / self.get_axis().norm();
 
-
         if diameter_change > EPSILON || length_change > EPSILON {
             if (diameter_change - length_change).abs() > 1e-3 {
-                println!("diameter_change: {:?}, length_change: {:?}",
-                        diameter_change, length_change);
+                println!(
+                    "diameter_change: {:?}, length_change: {:?}",
+                    diameter_change, length_change
+                );
                 panic!("Don't know how to stretch spherocylinders.")
             }
 
@@ -331,14 +328,15 @@ impl Object for Spherocylinder {
 
         if self.loc != other.loc {
             self.loc = other.loc;
-            node.set_local_translation(self.x());
+            node.set_local_translation(self.x().into());
         }
 
         if axis_change > EPSILON {
             self.axis = other.axis;
-            let y = na::Vec3::new(0.0, 1.0, 0.0);
-            let rot = y.rotation_to(&self.get_axis()).rotation();
-            node.set_local_rotation(rot);
+
+            let y = na::Vector3::new(0., 1., 0.);
+            let rot = na::Rotation3::rotation_between(&y, &self.get_axis()).unwrap();
+            node.set_local_rotation(rot.into());
         }
     }
 }

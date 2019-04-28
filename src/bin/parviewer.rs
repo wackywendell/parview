@@ -9,6 +9,11 @@
 #![deny(unused_results)]
 
 extern crate docopt;
+extern crate parview;
+extern crate serde;
+
+use docopt::Docopt;
+use serde::Deserialize;
 
 use std::path::Path;
 
@@ -16,7 +21,7 @@ use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILO
 use std::f32::consts::PI;
 
 // Write the Docopt usage string.
-docopt!(Args derive Debug, "
+const USAGE: &'static str = "
 Usage: parview [options] [--] [<file>]
 
 Options:
@@ -29,14 +34,19 @@ Options:
 Arguments:
     <file>      json file representing the frames. json.gz also accepted,
                 if the extension is \".gz\".
-",
-flag_palette : Option<String>,
-flag_config : Option<String>,
-arg_file : Option<String>,
-);
+";
+
+#[derive(Debug, Deserialize)]
+struct Args {
+    flag_palette: Option<String>,
+    flag_config: Option<String>,
+    arg_file: Option<String>,
+}
 
 fn run() -> Result<(), Box<std::error::Error>> {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|dopt| dopt.parse())
+        .unwrap_or_else(|e| e.exit());
     let toml_config: TomlConfig = match args.flag_config {
         None => Default::default(),
         Some(ref fname) => {

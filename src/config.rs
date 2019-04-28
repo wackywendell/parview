@@ -1,7 +1,8 @@
 //! Serializable configuration for Parview.
 use parviewer::Config;
 use serde;
-use rustc_serialize;
+
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 use toml;
@@ -9,7 +10,6 @@ use toml;
 /// Configuration to be loaded from the TOML file
 /// TomlConfig is deserialized by first deserializing one of these, and then
 /// filling in with defaults
-#[derive(RustcDecodable)]
 #[derive(Deserialize)]
 struct TomlConfigOpt {
     pub pitch: Option<f32>,
@@ -26,7 +26,7 @@ struct TomlConfigOpt {
 }
 
 /// Configuration to be loaded from the TOML file
-#[derive(RustcEncodable,Serialize,Debug,PartialEq,PartialOrd)]
+#[derive(Serialize, Debug, PartialEq, PartialOrd)]
 pub struct TomlConfig {
     /// Set initial pitch (degrees) [default: 90]
     pub pitch: f32,
@@ -70,15 +70,9 @@ impl Default for TomlConfig {
     }
 }
 
-impl serde::Deserialize for TomlConfig {
-    fn deserialize<D: serde::Deserializer>(d: &mut D) -> Result<Self, D::Error> {
+impl<'de> Deserialize<'de> for TomlConfig {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         TomlConfigOpt::deserialize(d).map(Self::from)
-    }
-}
-
-impl rustc_serialize::Decodable for TomlConfig {
-    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        TomlConfigOpt::decode(d).map(Self::from)
     }
 }
 
@@ -116,11 +110,9 @@ impl TomlConfig {
     }
 }
 
-
-
 #[test]
 fn config_toml_empty_string() {
     let c: TomlConfig = TomlConfig::default();
-    let c2: TomlConfig = toml::decode_str("").unwrap();
+    let c2: TomlConfig = toml::from_slice(b"").unwrap();
     assert_eq!(c, c2);
 }

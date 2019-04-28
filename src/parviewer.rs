@@ -2,25 +2,26 @@
 
 use std;
 
-use serde_json;
-use na;
 use kiss3d;
+use na;
 
 use flate2::read::GzDecoder;
+use kiss3d::event::{Action, Key, WindowEvent};
 use kiss3d::window::Window;
-use kiss3d::Event::{WindowEvent, Key};
+use serde::{Deserialize, Serialize};
 
-use std::path::Path;
-use std::fs::File;
+use std::error::Error;
 use std::f32::consts::PI;
+use std::fs::File;
+use std::path::Path;
 
-use timer::Timer;
 use misc;
-use palette::{Color, Palette};
 use objects::{Frame, ObjectTracker};
+use palette::{Color, Palette};
+use timer::Timer;
 
 /// The configuration options for a Parviewer instance.
-#[derive(Debug, RustcDecodable, RustcEncodable, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     /// Pitch of the camera, in degrees
     pub pitch: f32,
@@ -43,8 +44,8 @@ pub struct Config {
 }
 
 /// Open a `json` or `json.gz` file, and deserialize it into a `Vec<Frame>`
-pub fn open_file(path: &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
-    let mut buf: std::io::BufReader<File> = std::io::BufReader::new(try!(File::open(path)));
+pub fn open_file(path: &Path) -> Result<Vec<Frame>, Box<Error>> {
+    let mut buf: std::io::BufReader<File> = std::io::BufReader::new(File::open(path)?);
     // let f = try!(File::open(path));
 
     // ~ let coded = json::from_reader(&mut buf).unwrap();
@@ -59,7 +60,7 @@ pub fn open_file(path: &Path) -> Result<Vec<Frame>, serde_json::error::Error> {
 
     let coded = try!(match ext {
         Some("gz") => {
-            let mut gzbuf = try!(GzDecoder::new(buf));
+            let mut gzbuf = GzDecoder::new(buf);
             serde_json::de::from_reader(&mut gzbuf)
         }
         _ => serde_json::de::from_reader(&mut buf),
@@ -89,11 +90,11 @@ pub struct Parviewer {
 
 impl Parviewer {
     /// Create a new Parviewer instance from a give Config
-    pub fn new(frames: Vec<Frame>,
-               palette: Palette,
-               config: Config)
-               -> Result<Parviewer, Box<std::error::Error>> {
-
+    pub fn new(
+        frames: Vec<Frame>,
+        palette: Palette,
+        config: Config,
+    ) -> Result<Parviewer, Box<Error>> {
         // TODO: this is also a configuration option
         let title: String = format!("Parviewer");
         let width: u32 = config.width;
@@ -104,13 +105,15 @@ impl Parviewer {
             let _ = misc::draw_cube(&mut window);
         }
 
-        let eye = na::Pnt3::new(0.0f32, 0.0, config.distance);
-        let at = na::orig();
-        let mut arc_ball = kiss3d::camera::ArcBall::new_with_frustrum(config.fov * PI / 180.,
-                                                                      0.1,
-                                                                      1024.0,
-                                                                      eye,
-                                                                      at);
+        let eye = na::Point3::new(0.0f32, 0.0, config.distance);
+        let at = na::Point3::origin();
+        let mut arc_ball = kiss3d::camera::ArcBall::new_with_frustrum(
+            config.fov * PI / 180.,
+            0.1,
+            1024.0,
+            eye,
+            at,
+        );
 
         arc_ball.set_yaw(config.yaw * PI / 180.);
         arc_ball.set_pitch(config.pitch * PI / 180.);
@@ -133,7 +136,9 @@ impl Parviewer {
         // capsule2.set_local_translation(na::Vec3::new(0.5, 0., 0.));
 
         // TODO: config?
-        let dts_first = vec![1., 2., 3., 4., 6., 8., 12., 16., 24., 32., 48., 64., 96., 128.];
+        let dts_first = vec![
+            1., 2., 3., 4., 6., 8., 12., 16., 24., 32., 48., 64., 96., 128.,
+        ];
         let mut dts = dts_first.iter().rev().map(|n| 1. / n).collect::<Vec<f32>>();
         dts.extend(dts_first);
         dts.dedup();
@@ -143,8 +148,7 @@ impl Parviewer {
         timer.loop_pause = config.pauseloop;
         timer.fps = config.framerate;
 
-        let fontsize = 48;
-        let font = misc::inconsolata(fontsize);
+        let font = misc::inconsolata();
 
         Ok(Parviewer {
             config: config,
@@ -172,27 +176,38 @@ impl Parviewer {
 
     /// Draw some text in the window, with coordinates in the window frame (i.e., 0 to 1).
     pub fn draw_text(&mut self, t: &str, x: f32, y: f32, color: Color) {
-        let max_width = self.window.width() * 2.;
-        // TODO: Figure out why the bottom is window.height() * 2.
-        let max_height = self.window.height() * 2. - (self.font.height() as f32);
-        let text_loc = na::Pnt2::new(x * max_width, y * max_height);
-        let text_color = color.to_pnt3();
+        let font_size = 48; // TODO draw_text takes a "scale", is using the font_size correct?
 
-        self.window.draw_text(t, &text_loc, &self.font, &text_color);
+        let max_width = self.window.width() * 2;
+        // TODO: Figure out why the bottom is window.height() * 2.
+        let max_height = self.window.height() * 2 - font_size / 2; // TOD: Used to be - (self.font.height() as f32);
+        let text_loc = na::Point2::new(x * max_width as f32, y * max_height as f32);
+        let text_color = color.to_point3();
+        let font_size = 48; // TODO draw_text takes a "scale", is using the font_size correct?
+        self.window
+            .draw_text(t, &text_loc, font_size as f32, &self.font, &text_color);
     }
 
     /// Draw some text in the window, with coordinates in the window frame (i.e., 0 to 1).
     pub fn draw_frame_text(&mut self, x: f32, y: f32, color: Color) {
+        let font_size = 48; // TODO draw_text takes a "scale", is using the font_size correct?
+
         let ix = self.timer.get_index();
         let frame = &self.frames[ix];
         if !frame.text.is_empty() {
-            let max_width = self.window.width() * 2.;
+            let max_width = self.window.width() * 2;
             // TODO: Figure out why the bottom is window.height() * 2.
-            let max_height = self.window.height() * 2. - (self.font.height() as f32);
-            let text_loc = na::Pnt2::new(x * max_width, y * max_height);
-            let text_color = color.to_pnt3();
+            let max_height = self.window.height() * 2 - font_size;
+            let text_loc = na::Point2::new(x * max_width as f32, y * max_height as f32);
+            let text_color = color.to_point3();
 
-            self.window.draw_text(&*frame.text, &text_loc, &self.font, &text_color);
+            self.window.draw_text(
+                &*frame.text,
+                &text_loc,
+                font_size as f32,
+                &self.font,
+                &text_color,
+            );
         }
     }
 
@@ -200,7 +215,7 @@ impl Parviewer {
     pub fn handle_events(&mut self) {
         for mut event in self.window.events().iter() {
             match event.value {
-                WindowEvent::Key(key, _, glfw::Action::Release, _) => {
+                WindowEvent::Key(key, Action::Release, _) => {
                     // Default to inhibiting, although this can be overridden
                     let mut inhibit = true;
                     match key {
@@ -236,42 +251,44 @@ impl Parviewer {
                             };
                         }
                         Key::W => {
-                            println!("yaw: {:6.2}, pitch: {:6.2}, distance: {:6.2}",
-                                     self.camera.yaw() * 180. / PI,
-                                     self.camera.pitch() * 180. / PI,
-                                     self.camera.dist());
+                            println!(
+                                "yaw: {:6.2}, pitch: {:6.2}, distance: {:6.2}",
+                                self.camera.yaw() * 180. / PI,
+                                self.camera.pitch() * 180. / PI,
+                                self.camera.dist()
+                            );
                         }
                         Key::Space => {
                             self.paused = !self.paused;
                         }
-                        Key::Num1 => {
+                        Key::Key1 => {
                             self.palette.toggle_partial(0);
                         }
-                        Key::Num2 => {
+                        Key::Key2 => {
                             self.palette.toggle_partial(1);
                         }
-                        Key::Num3 => {
+                        Key::Key3 => {
                             self.palette.toggle_partial(2);
                         }
-                        Key::Num4 => {
+                        Key::Key4 => {
                             self.palette.toggle_partial(3);
                         }
-                        Key::Num5 => {
+                        Key::Key5 => {
                             self.palette.toggle_partial(4);
                         }
-                        Key::Num6 => {
+                        Key::Key6 => {
                             self.palette.toggle_partial(5);
                         }
-                        Key::Num7 => {
+                        Key::Key7 => {
                             self.palette.toggle_partial(6);
                         }
-                        Key::Num8 => {
+                        Key::Key8 => {
                             self.palette.toggle_partial(7);
                         }
-                        Key::Num9 => {
+                        Key::Key9 => {
                             self.palette.set_all_partial(true);
                         }
-                        Key::Num0 => {
+                        Key::Key0 => {
                             self.palette.set_all_partial(false);
                         }
                         code => {
@@ -288,7 +305,8 @@ impl Parviewer {
 
     /// Start the whole running sequence.
     pub fn run<F>(&mut self, mut update: F)
-        where F: FnMut(&mut Parviewer, bool)
+    where
+        F: FnMut(&mut Parviewer, bool),
     {
         {
             // Set it to the first position, and then return the borrow of `self` for
