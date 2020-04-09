@@ -8,7 +8,8 @@
 #![deny(unused_results)]
 
 extern crate docopt;
-extern crate glfw;
+extern crate kiss3d;
+extern crate mpeg_encoder;
 extern crate serde;
 
 extern crate parview;
@@ -17,7 +18,7 @@ use std::f32::consts::PI;
 use std::path::Path;
 
 use docopt::Docopt;
-use glfw::{Key, WindowEvent};
+use kiss3d::event::{Action, Key, WindowEvent};
 use serde::Deserialize;
 
 use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILON};
@@ -78,17 +79,21 @@ fn run() -> Result<(), Box<std::error::Error>> {
     // Record as fast as possible
     viewer.window.set_framerate_limit(Some(framerate as u64));
     let text_color = Color(255, 255, 255);
+    let width = viewer.window.width();
+    let height = viewer.window.height();
+    let mut buf: Vec<u8> = Vec::with_capacity((width * height) as usize);
 
-    let mut recorder = Recorder::new_with_params(
+    let mut recorder = mpeg_encoder::Encoder::new_with_params(
         &args.arg_moviefile,
-        viewer.window.width() as usize,
-        viewer.window.height() as usize,
+        width as usize,
+        height as usize,
         None,                          // bit_rate
         Some((1, framerate as usize)), // time base
         None,
         None,
         None,
     );
+
     println!(
         "Sizes: {}, {}",
         viewer.window.width() as usize,
@@ -113,7 +118,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
 
         for mut event in viewer.window.events().iter() {
             match event.value {
-                WindowEvent::Key(key, _, glfw::Action::Release, _) => {
+                WindowEvent::Key(key, Action::Release, _) => {
                     // Default to inhibiting, although this can be overridden
                     let inhibit = true;
                     match key {
@@ -126,7 +131,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
                     // ignore all other keys
                     event.inhibited = inhibit;
                 }
-                glfw::WindowEvent::CursorPos(_, _) => {
+                WindowEvent::CursorPos(_, _, _) => {
                     // ignore drag events
                     event.inhibited = true;
                 }
@@ -135,7 +140,9 @@ fn run() -> Result<(), Box<std::error::Error>> {
         }
 
         viewer.draw_frame_text(0., 0., text_color);
-        recorder.snap(&mut viewer.window);
+        viewer.window.snap(&mut buf);
+        // TODO is this the right ordering of RGB? Or is it RGBA? And the flip?
+        recorder.encode_rgb(width as usize, height as usize, &buf, true);
 
         let frames_per_tick = viewer.timer.get_dt() / framerate;
         let total = viewer
