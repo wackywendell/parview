@@ -2,15 +2,16 @@
 
 name = "parview"
 version = "0.3.0"
-authors = [ "wendell.smith@yale.edu" ]
+authors = [ "wackywendell@gmail.com" ]
 
 [dependencies]
-docopt = "*"
-nalgebra = "*"
-kiss3d = "*"
-rand = "*"
-glfw = "*"
-flate2 = "*"
-serde = "*"
-serde_json = "1.0"
-toml = "*"
+docopt = "1.1.0"
+# Use the same version of nalgebra as kiss3d
+nalgebra = "=0.20.0"
+kiss3d = "0.23.0"
+rand = "0.7.3"
+glfw = "0.37.0"
+flate2 = "1.0.14"
+serde = "1.0.106"
+serde_json = "1.0.51"
+toml = "0.5.6"

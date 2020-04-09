@@ -10,7 +10,6 @@ use kiss3d::window::Window;
 use rand::random;
 use serde::Deserialize;
 
-use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
@@ -19,13 +18,15 @@ use std::path::Path;
 use objects;
 use palette;
 
+type Error = Box<dyn std::error::Error>;
+
 /// A random Vector3<f32>, with coordinates in (-0.5, 0.5)
 pub fn rand_vec() -> na::Vector3<f32> {
     na::Vector3::new(random::<f32>(), random(), random()) - na::Vector3::new(0.5f32, 0.5f32, 0.5f32)
 }
 
 /// Deserialize a function from a `.json` or `.json.gz` file
-pub fn deserialize_by_ext<T>(path: &Path) -> Result<T, Box<Error>>
+pub fn deserialize_by_ext<T>(path: &Path) -> Result<T, Error>
 where
     for<'de> T: Deserialize<'de>,
 {
@@ -49,7 +50,7 @@ where
 }
 
 /// Generate an example json file
-pub fn generate_frame(path: &Path) -> Result<Vec<objects::Frame>, Box<Error>> {
+pub fn generate_frame(path: &Path) -> Result<Vec<objects::Frame>, Error> {
     let spheres = (0..16)
         .map(|n| {
             let loc: na::Vector3<f32> = rand_vec();
@@ -111,8 +112,8 @@ pub fn generate_frame(path: &Path) -> Result<Vec<objects::Frame>, Box<Error>> {
 }
 
 /// Write a default palette, as an example to be used when creating a new one
-pub fn generate_palette(path: &Path) -> Result<palette::Palette, Box<Error>> {
-    let mut file: File = try!(File::create(path));
+pub fn generate_palette(path: &Path) -> Result<palette::Palette, Error> {
+    let mut file: File = File::create(path)?;
     let mut default_palette = palette::Palette::default();
     let _ = default_palette.assigned.insert(
         objects::ObjectID(vec!["A".into()]),
@@ -128,10 +129,10 @@ pub fn generate_palette(path: &Path) -> Result<palette::Palette, Box<Error>> {
 }
 
 /// Load from a file, using toml-rs and serialize
-pub fn load_toml<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, Box<Error>> {
-    let mut file: File = try!(File::open(path));
+pub fn load_toml<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, Error> {
+    let mut file: File = File::open(path)?;
     let mut s = String::new();
-    let _ = try!(file.read_to_string(&mut s));
+    let _ = file.read_to_string(&mut s)?;
     Ok(toml::from_str(&*s)?)
 }
 
@@ -166,8 +167,8 @@ pub fn draw_cube(window: &mut Window) -> kiss3d::scene::SceneNode {
 }
 
 /// Turn an error into a print message.
-pub fn err_print(err: &Error) {
-    println!("Description: {}", err.description());
+pub fn err_print(err: &dyn std::error::Error) {
+    println!("Description: {}", err);
     println!("Debug version: {:?}", err);
 
     if let Some(e) = err.source() {

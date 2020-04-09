@@ -15,6 +15,7 @@ extern crate serde;
 use docopt::Docopt;
 use serde::Deserialize;
 
+use std::error::Error;
 use std::path::Path;
 
 use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILON};
@@ -44,7 +45,7 @@ struct Args {
     arg_file: Option<String>,
 }
 
-fn run() -> Result<(), Box<std::error::Error>> {
+fn run() -> Result<(), Box<dyn Error>> {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
@@ -52,7 +53,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
         None => Default::default(),
         Some(ref fname) => {
             let path: &Path = Path::new(&fname[..]);
-            try!(misc::load_toml::<TomlConfig>(path))
+            misc::load_toml::<TomlConfig>(path)?
         }
     };
 
@@ -65,22 +66,22 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let path: &Path = Path::new(fname);
 
     let (frames, palette): (Vec<Frame>, Palette) = if args.flag_generate {
-        let frames = try!(misc::generate_frame(path));
+        let frames = misc::generate_frame(path)?;
         let palette = match args.flag_palette {
             None => Default::default(),
             Some(fname) => {
                 let palette_path: &Path = Path::new(&fname[..]);
-                try!(misc::generate_palette(palette_path))
+                misc::generate_palette(palette_path)?
             }
         };
         (frames, palette)
     } else {
-        let frames = try!(misc::deserialize_by_ext(path));
+        let frames = misc::deserialize_by_ext(path)?;
         let palette = match args.flag_palette {
             None => Default::default(),
             Some(fname) => {
                 let palette_path: &Path = Path::new(&fname[..]);
-                try!(misc::load_toml::<Palette>(palette_path))
+                misc::load_toml::<Palette>(palette_path)?
             }
         };
         (frames, palette)
@@ -88,7 +89,7 @@ fn run() -> Result<(), Box<std::error::Error>> {
 
     // println!("config: {:?}", config);
 
-    let mut viewer = try!(Parviewer::new(frames, palette, config));
+    let mut viewer = Parviewer::new(frames, palette, config)?;
     let _ = viewer.timer.at_least(toml_config.fps);
     let text_color = Color(255, 255, 255);
 

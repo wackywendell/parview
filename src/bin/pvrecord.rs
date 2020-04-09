@@ -1,12 +1,5 @@
 //! # ParView
 //!
-
-#![feature(plugin)]
-#![feature(custom_derive)]
-#![plugin(docopt_macros)]
-
-#![feature(concat_idents)]
-
 #![deny(non_camel_case_types)]
 #![deny(unused_parens)]
 #![deny(non_upper_case_globals)]
@@ -14,23 +7,23 @@
 #![deny(missing_docs)]
 #![deny(unused_results)]
 
-extern crate rustc_serialize;
 extern crate docopt;
-extern crate kiss3d_recording;
 extern crate glfw;
+extern crate serde;
 
 extern crate parview;
 
+use std::f32::consts::PI;
 use std::path::Path;
 
-use kiss3d_recording::Recorder;
-use glfw::{WindowEvent, Key};
+use docopt::Docopt;
+use glfw::{Key, WindowEvent};
+use serde::Deserialize;
 
-use parview::{misc, Palette, Color, Config, TomlConfig, Frame, Parviewer, EPSILON};
-use std::f32::consts::PI;
+use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILON};
 
 // Write the Docopt usage string.
-docopt!(Args derive Debug, "
+const USAGE: &str = "
 Usage: pvrecord [options] [--] <particlefile> <moviefile>
 
 Options:
@@ -42,20 +35,24 @@ Options:
 Arguments:
     <file>      json file representing the frames. json.gz also accepted, if
                 the extension is \".gz\".
-",
-flag_palette : Option<String>,
-flag_config : Option<String>,
-arg_particlefile : String,
-arg_moviefile : String,
-);
+";
+
+#[derive(Deserialize)]
+struct Args {
+    flag_palette: Option<String>,
+    flag_config: Option<String>,
+    arg_particlefile: String,
+    arg_moviefile: String,
+}
 
 fn run() -> Result<(), Box<std::error::Error>> {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let docopt = docopt::Docopt::new(USAGE)?;
+    let args: Args = docopt.parse()?.deserialize()?;
     let toml_config: TomlConfig = match args.flag_config {
         None => Default::default(),
         Some(ref fname) => {
             let path: &Path = Path::new(&fname[..]);
-            try!(misc::load_toml::<TomlConfig>(path))
+            misc::load_toml::<TomlConfig>(path)?
         }
     };
 
@@ -65,34 +62,38 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let fname: &str = &args.arg_particlefile;
     let path: &Path = Path::new(fname);
 
-    let frames: Vec<Frame> = try!(misc::deserialize_by_ext(path));
+    let frames: Vec<Frame> = misc::deserialize_by_ext(path)?;
     let palette: Palette = match args.flag_palette {
         None => Default::default(),
         Some(fname) => {
             let palette_path: &Path = Path::new(&fname[..]);
-            try!(misc::load_toml::<Palette>(palette_path))
+            misc::load_toml::<Palette>(palette_path)?
         }
     };
 
     // println!("config: {:?}", config);
 
-    let mut viewer = try!(Parviewer::new(frames, palette, config));
+    let mut viewer = Parviewer::new(frames, palette, config)?;
     let _ = viewer.timer.at_least(toml_config.fps);
     // Record as fast as possible
     viewer.window.set_framerate_limit(Some(framerate as u64));
     let text_color = Color(255, 255, 255);
 
-    let mut recorder = Recorder::new_with_params(&args.arg_moviefile,
-                                                 viewer.window.width() as usize,
-                                                 viewer.window.height() as usize,
-                                                 None, // bit_rate
-                                                 Some((1, framerate as usize)), // time base
-                                                 None,
-                                                 None,
-                                                 None);
-    println!("Sizes: {}, {}",
-             viewer.window.width() as usize,
-             viewer.window.height() as usize);
+    let mut recorder = Recorder::new_with_params(
+        &args.arg_moviefile,
+        viewer.window.width() as usize,
+        viewer.window.height() as usize,
+        None,                          // bit_rate
+        Some((1, framerate as usize)), // time base
+        None,
+        None,
+        None,
+    );
+    println!(
+        "Sizes: {}, {}",
+        viewer.window.width() as usize,
+        viewer.window.height() as usize
+    );
 
     let mut lastix = 0;
 
@@ -137,14 +138,17 @@ fn run() -> Result<(), Box<std::error::Error>> {
         recorder.snap(&mut viewer.window);
 
         let frames_per_tick = viewer.timer.get_dt() / framerate;
-        let total = viewer.timer
-                          .total_loop_time()
-                          .map(|n| format!("{}", (n / frames_per_tick + 0.5) as usize))
-                          .unwrap_or("?".into());
+        let total = viewer
+            .timer
+            .total_loop_time()
+            .map(|n| format!("{}", (n / frames_per_tick + 0.5) as usize))
+            .unwrap_or("?".into());
 
-        let title = format!("Parviewer ({} / {})",
-                            ((viewer.timer.get_time() / frames_per_tick) + 0.5) as usize,
-                            total);
+        let title = format!(
+            "Parviewer ({} / {})",
+            ((viewer.timer.get_time() / frames_per_tick) + 0.5) as usize,
+            total
+        );
         viewer.window.set_title(&title);
         // println!("{}", title);
     });

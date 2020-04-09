@@ -75,7 +75,7 @@ pub struct Frame {
 
 impl<'de> Deserialize<'de> for Frame {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let minim = try!(MinimalFrame::deserialize(d));
+        let minim = MinimalFrame::deserialize(d)?;
         Ok(Frame {
             spheres: minim.spheres.unwrap_or(vec![]),
             spherocylinders: minim.spherocylinders.unwrap_or(vec![]),
