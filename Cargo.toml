@@ -9,7 +9,7 @@ docopt = "1.1.0"
 # Use the same version of nalgebra as kiss3d
 nalgebra = "=0.20.0"
 kiss3d = "0.23.0"
-mpeg_encoder = "0.2.1"
+rav1e = "0.3.1"
 rand = "0.7.3"
 flate2 = "1.0.14"
 serde = "1.0.106"

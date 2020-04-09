@@ -58,13 +58,13 @@ pub fn open_file(path: &Path) -> Result<Vec<Frame>, Box<Error>> {
         println!("gz ext!");
     }
 
-    let coded = try!(match ext {
+    let coded = match ext {
         Some("gz") => {
             let mut gzbuf = GzDecoder::new(buf);
             serde_json::de::from_reader(&mut gzbuf)
         }
         _ => serde_json::de::from_reader(&mut buf),
-    });
+    }?;
 
     Ok(coded)
 }

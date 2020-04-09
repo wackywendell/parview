@@ -193,7 +193,7 @@ impl Default for Palette {
                 DEFAULT_COLORS.iter().map(|&(r, g, b)| Color(r, g, b)),
             ),
             partials: PartialIDer::new(8, true),
-            assigned: HashMap::new(),
+            assigned: HashMap::<ObjectID, Color>::new(),
             next_color: 0,
         }
     }
@@ -296,7 +296,7 @@ impl Serialize for Palette {
 
 impl<'de> Deserialize<'de> for Palette {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let p = try!(PaletteOpt::deserialize(deserializer));
+        let p = PaletteOpt::deserialize(deserializer)?;
         Ok(p.into_palette())
     }
 }
