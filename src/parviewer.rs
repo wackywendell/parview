@@ -44,7 +44,7 @@ pub struct Config {
 }
 
 /// Open a `json` or `json.gz` file, and deserialize it into a `Vec<Frame>`
-pub fn open_file(path: &Path) -> Result<Vec<Frame>, Box<Error>> {
+pub fn open_file(path: &Path) -> Result<Vec<Frame>, Box<dyn Error>> {
     let mut buf: std::io::BufReader<File> = std::io::BufReader::new(File::open(path)?);
     // let f = try!(File::open(path));
 
@@ -94,7 +94,7 @@ impl Parviewer {
         frames: Vec<Frame>,
         palette: Palette,
         config: Config,
-    ) -> Result<Parviewer, Box<Error>> {
+    ) -> Result<Parviewer, Box<dyn Error>> {
         // TODO: this is also a configuration option
         let title: String = format!("Parviewer");
         let width: u32 = config.width;

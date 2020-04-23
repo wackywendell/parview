@@ -9,7 +9,7 @@
 
 extern crate docopt;
 extern crate kiss3d;
-extern crate rav1e;
+extern crate mpeg_encoder;
 extern crate serde;
 
 extern crate parview;
@@ -17,8 +17,8 @@ extern crate parview;
 use std::f32::consts::PI;
 use std::path::Path;
 
-use docopt::Docopt;
 use kiss3d::event::{Action, Key, WindowEvent};
+use mpeg_encoder::Encoder;
 use serde::Deserialize;
 
 use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILON};
@@ -46,7 +46,7 @@ struct Args {
     arg_moviefile: String,
 }
 
-fn run() -> Result<(), Box<std::error::Error>> {
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     let docopt = docopt::Docopt::new(USAGE)?;
     let args: Args = docopt.parse()?.deserialize()?;
     let toml_config: TomlConfig = match args.flag_config {
@@ -62,10 +62,6 @@ fn run() -> Result<(), Box<std::error::Error>> {
 
     let fname: &str = &args.arg_particlefile;
     let path: &Path = Path::new(fname);
-    let file = std::fs::File::open(path)?;
-
-    let rav_cfg = rav1e::Config::default();
-    let rav_ctx: rav1e::Context<u8> = rav_cfg.new_context()?;
 
     let frames: Vec<Frame> = misc::deserialize_by_ext(path)?;
     let palette: Palette = match args.flag_palette {
@@ -86,6 +82,17 @@ fn run() -> Result<(), Box<std::error::Error>> {
     let width = viewer.window.width();
     let height = viewer.window.height();
     let mut buf: Vec<u8> = Vec::with_capacity((width * height) as usize);
+
+    let mut encoder = Encoder::new_with_params(
+        &args.arg_moviefile,
+        viewer.window.width() as usize,
+        viewer.window.height() as usize,
+        None,                          // bit_rate
+        Some((1, framerate as usize)), // time base
+        None,
+        None,
+        None,
+    );
 
     println!(
         "Sizes: {}, {}",
@@ -134,8 +141,12 @@ fn run() -> Result<(), Box<std::error::Error>> {
 
         viewer.draw_frame_text(0., 0., text_color);
         viewer.window.snap(&mut buf);
-
-        // TODO put frame into rav1e here
+        encoder.encode_rgb(
+            viewer.window.width() as usize,
+            viewer.window.height() as usize,
+            &buf,
+            false,
+        );
 
         let frames_per_tick = viewer.timer.get_dt() / framerate;
         let total = viewer

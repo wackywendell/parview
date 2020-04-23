@@ -302,7 +302,7 @@ impl<'de> Deserialize<'de> for Palette {
 }
 
 #[test]
-fn palette_toml_round_trip() -> Result<(), Box<std::error::Error>> {
+fn palette_toml_round_trip() -> Result<(), Box<dyn std::error::Error>> {
     let p = Palette::default();
     let s = toml::to_string(&p)?;
     let p2 = toml::from_str(&*s)?;
