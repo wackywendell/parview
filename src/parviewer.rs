@@ -107,7 +107,7 @@ impl Parviewer {
 
         let eye = na::Point3::new(0.0f32, 0.0, config.distance);
         let at = na::Point3::origin();
-        let mut arc_ball = kiss3d::camera::ArcBall::new_with_frustrum(
+        let mut camera = kiss3d::camera::ArcBall::new_with_frustrum(
             config.fov * PI / 180.,
             0.1,
             1024.0,
@@ -115,8 +115,8 @@ impl Parviewer {
             at,
         );
 
-        arc_ball.set_yaw(config.yaw * PI / 180.);
-        arc_ball.set_pitch(config.pitch * PI / 180.);
+        camera.set_yaw(config.yaw * PI / 180.);
+        camera.set_pitch(config.pitch * PI / 180.);
 
         // window.set_background_color(1.0, 1.0, 1.0);
         window.set_light(kiss3d::light::Light::StickToCamera);
@@ -151,14 +151,14 @@ impl Parviewer {
         let font = kiss3d::text::Font::default();
 
         Ok(Parviewer {
-            config: config,
-            frames: frames,
-            palette: palette,
-            timer: timer,
-            window: window,
-            nodes: nodes,
-            camera: arc_ball,
-            font: font,
+            config,
+            frames,
+            palette,
+            timer,
+            window,
+            nodes,
+            camera,
+            font,
             paused: false,
         })
     }

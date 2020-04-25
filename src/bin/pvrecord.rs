@@ -121,12 +121,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 WindowEvent::Key(key, Action::Release, _) => {
                     // Default to inhibiting, although this can be overridden
                     let inhibit = true;
-                    match key {
-                        Key::Q => {
-                            viewer.window.close();
-                            return;
-                        }
-                        _ => {}
+                    if let Key::Q = key {
+                        viewer.window.close();
+                        return;
                     }
                     // ignore all other keys
                     event.inhibited = inhibit;
@@ -153,7 +150,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             .timer
             .total_loop_time()
             .map(|n| format!("{}", (n / frames_per_tick + 0.5) as usize))
-            .unwrap_or("?".into());
+            .unwrap_or_else(|| "?".into());
 
         let title = format!(
             "Parviewer ({} / {})",

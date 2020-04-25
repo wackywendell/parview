@@ -22,7 +22,7 @@ use parview::{misc, Color, Config, Frame, Palette, Parviewer, TomlConfig, EPSILO
 use std::f32::consts::PI;
 
 // Write the Docopt usage string.
-const USAGE: &'static str = "
+const USAGE: &str = "
 Usage: parview [options] [--] [<file>]
 
 Options:

@@ -6,8 +6,8 @@ use std::cmp::Ordering;
 /// Keeps track of the current playback speed and what index we are at.
 pub struct Timer {
     dts: Vec<f32>, // possible dt values
-    dti: isize, /* which of dts we're talking about. 0 is stop, 1 => dts[0], -1 =>
-                 * -dts[0] */
+    dti: isize,    /* which of dts we're talking about. 0 is stop, 1 => dts[0], -1 =>
+                    * -dts[0] */
     len: Option<usize>, // length of what we're iterating over
     /// Current index, as float; keeps track of partials
     pub t: f32,
@@ -20,14 +20,17 @@ pub struct Timer {
 impl Timer {
     /// Make a new timer
     pub fn new(dts: Vec<f32>, len: Option<usize>) -> Timer {
-        let mut new_dts = if dts.is_empty() {
-            vec!(1f32)
-        } else {
-            dts
-        };
+        let mut new_dts = if dts.is_empty() { vec![1f32] } else { dts };
         new_dts.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
 
-        Timer { dts: new_dts, dti: 1, len: len, t: 0.0, loop_pause: None, fps: 1.0 }
+        Timer {
+            dts: new_dts,
+            dti: 1,
+            len,
+            t: 0.0,
+            loop_pause: None,
+            fps: 1.0,
+        }
     }
 
     /// set speed to at least a given value. Direction is taken into account.
@@ -35,11 +38,11 @@ impl Timer {
     pub fn at_least(&mut self, new_speed: f32) -> f32 {
         let signum = new_speed.signum();
         let abs_speed = new_speed * signum;
-        for new_ix in 0isize..((self.dts.len()+1) as isize) {
+        for new_ix in 0isize..((self.dts.len() + 1) as isize) {
             let speed = if new_ix == 0 {
                 0.
             } else {
-                self.dts[(new_ix-1) as usize]
+                self.dts[(new_ix - 1) as usize]
             };
             self.dti = new_ix * (signum as isize);
             if speed >= abs_speed {
@@ -78,8 +81,8 @@ impl Timer {
     pub fn get_dt(&self) -> f32 {
         match self.dti {
             0 => 0.,
-            i if i > 0 => self.dts[(i-1) as usize],
-            i => -self.dts[(-1-i) as usize],
+            i if i > 0 => self.dts[(i - 1) as usize],
+            i => -self.dts[(-1 - i) as usize],
         }
     }
 
@@ -97,7 +100,7 @@ impl Timer {
                 self.t = 0.;
             }
             (_, None) if self.t < 0. => {
-                    // fixed length, but no loop, but t is negative
+                // fixed length, but no loop, but t is negative
                 self.t = 0.;
             }
             (Some(len), Some(pause)) => {
@@ -116,27 +119,19 @@ impl Timer {
     /// Total time before looping
     pub fn total_loop_time(&self) -> Option<f32> {
         match (self.len, self.loop_pause) {
-            (None, _) => {
-                None
-            }
-            (Some(len), None) => {
-                Some(len as f32)
-            }
-            (Some(len), Some(pause)) => {
-                Some((len as f32) + pause)
-            }
+            (None, _) => None,
+            (Some(len), None) => Some(len as f32),
+            (Some(len), Some(pause)) => Some((len as f32) + pause),
         }
     }
 
     /// Get the current index into the array
     pub fn get_index(&self) -> usize {
         match (self.len, self.loop_pause) {
-            (None, _) if self.t < 0. => {
-                0
-            }
+            (None, _) if self.t < 0. => 0,
             (None, _) => self.t as usize,
             (_, None) if self.t < 0. => {
-                    // fixed length, but no loop, but t is negative
+                // fixed length, but no loop, but t is negative
                 0
             }
             (Some(len), None) => {
@@ -167,7 +162,7 @@ mod test {
 
     #[test]
     fn timer_dts() {
-        let mut t = ::Timer::new(vec!(1.,2.,4.), None);
+        let mut t = ::Timer::new(vec![1., 2., 4.], None);
         assert_eq!(t.get_dt(), 1.);
         t.incr();
         assert_eq!(t.get_index(), 1);
@@ -219,7 +214,7 @@ mod test {
 
     #[test]
     fn timer_pauseloop() {
-        let mut t = ::Timer::new(vec!(1.,2.,4.), Some(5));
+        let mut t = ::Timer::new(vec![1., 2., 4.], Some(5));
         t.loop_pause = Some(5.);
         t.fps = 2.;
         t.faster();

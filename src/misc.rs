@@ -59,13 +59,13 @@ pub fn generate_frame(path: &Path) -> Result<Vec<objects::Frame>, Error> {
             objects::Sphere {
                 loc: (loc.x, loc.y, loc.z),
                 diameter: s * 0.2,
-                names: names,
+                names,
             }
         })
         .collect();
 
     let f = objects::Frame {
-        spheres: spheres,
+        spheres,
         spherocylinders: vec![],
         text: String::new(),
     };
@@ -82,7 +82,7 @@ pub fn generate_frame(path: &Path) -> Result<Vec<objects::Frame>, Error> {
                     let mut newr = s.diameter;
                     if n == 0 {
                         newr = random::<f32>() * 0.2f32;
-                    }
+                    };
                     let (sx, sy, sz) = s.loc;
                     let v = na::Vector3::new(sx, sy, sz) + (rand_vec() * 0.1f32);
                     objects::Sphere {
@@ -150,13 +150,11 @@ pub fn draw_cube(window: &mut Window) -> kiss3d::scene::SceneNode {
     for rot in &rotations {
         for t in &translations {
             let mut caps = cube.add_capsule(0.01, 1.0);
-            caps.append_translation(t.into());
-            match *rot {
-                Some(r) => {
-                    caps.append_rotation(&na::UnitQuaternion::new(r * std::f32::consts::FRAC_PI_2))
-                }
-                None => {}
+            caps.append_translation(t);
+            if let Some(r) = *rot {
+                caps.append_rotation(&na::UnitQuaternion::new(r * std::f32::consts::FRAC_PI_2))
             }
+
             //caps.append_translation(&Vec3::new(-0.5, 0.0, -0.5));
         }
     }
